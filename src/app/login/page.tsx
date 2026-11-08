@@ -1,0 +1,11 @@
+"use client";
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+export default function Login() {
+ const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
+ async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError("");try{const s=createClient();const {data,error}=await s.auth.signInWithPassword({email,password});if(error)throw error;const uid=data.user.id;
+ const [p,m]=await Promise.all([s.from("platform_roles").select("role").eq("user_id",uid).eq("status","active").maybeSingle(),s.from("business_memberships").select("role").eq("user_id",uid).eq("status","active").order("created_at").limit(1).maybeSingle()]);
+ if(p.data?.role==="super_admin")location.href="/platform/dashboard";else if(p.data?.role==="agent")location.href="/agent/dashboard";else if(m.data?.role==="owner")location.href="/admin/dashboard";else if(m.data?.role==="employee")location.href="/employee/dashboard";else location.href="/register";
+ }catch(err){setError(err instanceof Error?err.message:"Unable to sign in.");}finally{setBusy(false);}}
+ return <main><header className="top"><a className="logo" href="/">DIGI<em>BIASHARA</em></a><a href="/register">Create business</a></header><section className="auth"><form className="authbox" onSubmit={submit}><div className="eyebrow">Welcome back</div><h1>Sign in to Digi Biashara</h1><p className="muted">Use your account email and password.</p>{error&&<div className="error">{error}</div>}<div className="field"><label>Email address</label><input type="email" autoComplete="email" required value={email} onChange={e=>setEmail(e.target.value)}/></div><div className="field"><label>Password</label><input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></div><button className="btn" style={{width:"100%",marginTop:8}} disabled={busy}>{busy?"Signing in…":"Sign in"}</button><p className="muted" style={{fontSize:13,marginTop:20}}>New to Digi Biashara? <a href="/register" style={{color:"var(--green)",fontWeight:700}}>Register your business</a></p></form></section></main>;
+}
