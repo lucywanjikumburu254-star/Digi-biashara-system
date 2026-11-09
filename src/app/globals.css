@@ -131,3 +131,27 @@
 .employee-pos .cart-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .employee-pos .cart-row span{flex:1}
 @media(max-width:640px){.employee-pos-head,.employee-pos-content{padding-left:16px;padding-right:16px}.employee-pos .form-grid{grid-template-columns:1fr}.employee-pos .checkout-total-row{font-size:16px}}
+
+/* Smart Product Scanner */
+.scanner-launch{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:18px}
+.scanner-launch h2{margin:0 0 6px}.scanner-launch p{margin:0}
+.product-scanner{margin-bottom:20px}
+.product-scanner .panelhead p{margin:5px 0 0}
+.scanner-tabs{display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px;margin:12px 0 16px}
+.scanner-tabs button{border:1px solid var(--line);background:var(--surface,#fff);color:var(--foreground);border-radius:10px;padding:10px 14px;font-weight:650;cursor:pointer}
+.scanner-tabs button.selected{background:var(--primary,#173f46);border-color:var(--primary,#173f46);color:#fff}
+.scanner-content{display:grid;gap:13px}
+.scanner-content>p{font-size:13px;color:var(--muted);line-height:1.6;margin:0}
+.scanner-video{display:block;width:min(100%,560px);max-height:360px;aspect-ratio:4/3;object-fit:cover;background:#101820;border-radius:14px;margin:0 auto}
+.scanner-actions{display:flex;justify-content:center}
+.scanner-manual{display:flex;gap:9px;max-width:560px;width:100%;margin:0 auto}
+.scanner-manual input{min-width:0;flex:1;border:1px solid var(--line);border-radius:9px;padding:12px;font:inherit}
+.scanner-upload{display:flex;align-items:center;justify-content:center;min-height:100px;border:1.5px dashed var(--line);border-radius:13px;padding:20px;text-align:center;cursor:pointer;font-weight:700;background:var(--surface,#fff)}
+.scanner-upload input{display:none}
+.scanner-status{background:#f0f6ff;color:#174a7b;border-radius:9px;padding:12px;font-size:13px}
+.scanner-drafts{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
+.scanner-drafts h3{margin:0}
+.scanner-draft{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}
+.scanner-draft .field{min-width:0}
+.scanner-draft-actions{grid-column:1/-1;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+@media(max-width:650px){.scanner-launch{align-items:stretch}.scanner-launch .btn{width:100%}.scanner-tabs button{flex:1 1 100%}.scanner-manual{flex-direction:column}.scanner-draft{grid-template-columns:1fr}.scanner-draft-actions{align-items:stretch}.scanner-draft-actions .btn{width:100%}}
