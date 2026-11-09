@@ -11,8 +11,9 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: { ...cors, "Content-Type": "application/json" } });
 
   const url = Deno.env.get("SUPABASE_URL")!;
-  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? "";
+  const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_SECRET_KEY") ?? "";
+  if (!url || !anon || !service) return new Response(JSON.stringify({ error: "Server authentication is not configured." }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return new Response(JSON.stringify({ error: "Sign in first." }), { status: 401, headers: { ...cors, "Content-Type": "application/json" } });
 
@@ -25,6 +26,10 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const mode = body.mode;
+    const { data: roleRecord, error: roleError } = await caller.from("platform_roles").select("role,status").eq("user_id", user.id).eq("status", "active").maybeSingle();
+    if (roleError) throw roleError;
+    const allowed = mode === "agent_business" ? roleRecord?.role === "agent" : (mode === "platform_business" || mode === "agent_account") ? roleRecord?.role === "super_admin" : false;
+    if (!allowed) throw new Error("You are not authorised to create this account or business.");
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
     if (!email) throw new Error("Owner or agent email is required.");
