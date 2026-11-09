@@ -209,25 +209,72 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
 
   function transactionForm(sale:boolean){
     const list=products.filter(p=>sale|| (p.item_type==="product"&&p.track_stock));
-    return <form className="panel workspace-form" onSubmit={transact}>
-      <div className="panelhead"><h2>{sale?"Create sale":"Receive supplier purchase"}</h2></div>
+    const subtotal=cart.reduce((sum,line)=>sum+line.quantity*Number(sale?line.unit_price:line.unit_cost),0);
+    const discount=sale?Math.max(0,Number(form.discount||0)):0;
+    const tax=sale?Math.max(0,Number(form.tax||0)):0;
+    const total=Math.max(0,subtotal-discount+tax);
+    const received=form.amount_paid===""?total:Math.max(0,Number(form.amount_paid||0));
+    const balance=Math.max(0,total-received);
+    const change=Math.max(0,received-total);
+    const methods=[{value:"cash",label:"Cash",icon:"💵"},{value:"mpesa",label:"M-Pesa",icon:"📱"},{value:"card",label:"Card",icon:"💳"},{value:"bank",label:"Bank",icon:"🏦"},{value:"credit",label:"Credit",icon:"🧾"},{value:"other",label:"Other",icon:"＋"}];
+    if(!sale) return <form className="panel workspace-form" onSubmit={transact}>
+      <div className="panelhead"><h2>Receive supplier purchase</h2><span className="pill">Stock intake</span></div>
       <div className="form-grid">
         {select("Branch","branch_id",branches.filter(b=>b.status==="active").map(b=>({value:b.id,label:b.name})),true)}
-        {sale?select("Customer","customer_id",customers.map(c=>({value:c.id,label:c.name}))):select("Supplier","supplier_id",suppliers.map(c=>({value:c.id,label:c.name})))}
-        {sale?select("Payment method","payment_method",["cash","mpesa","card","bank","credit","other"].map(v=>({value:v,label:v.toUpperCase()})),true):field("Supplier invoice number","contact_person")}
-        {sale&&field("Discount (KSh)","discount","number")}
-        {sale&&field("Tax (KSh)","tax","number")}
-        {sale&&field("Amount received (KSh) — blank means fully paid","amount_paid","number")}
+        {select("Supplier","supplier_id",suppliers.map(x=>({value:x.id,label:x.name})))}
+        {field("Supplier invoice number","contact_person")}
         {field("Notes","notes")}
       </div>
       <div className="line-entry">
-        <label className="field"><span>{sale?"Product or service":"Stock item"}</span><select value={lineProduct} onChange={e=>setLineProduct(e.target.value)}><option value="">Select item</option>{list.map(p=><option key={p.id} value={p.id}>{p.name} · {money(sale?p.selling_price:p.cost_price)}</option>)}</select></label>
+        <label className="field"><span>Stock item</span><select value={lineProduct} onChange={e=>setLineProduct(e.target.value)}><option value="">Select item</option>{list.map(p=><option key={p.id} value={p.id}>{p.name} · {money(p.cost_price)}</option>)}</select></label>
         <label className="field"><span>Quantity</span><input type="number" min="0.001" step="0.001" value={lineQty} onChange={e=>setLineQty(e.target.value)}/></label>
-        <label className="field"><span>{sale?"Unit price (KSh)":"Unit cost (KSh)"}</span><input type="number" min="0" step="0.01" value={sale?linePrice:lineCost} onChange={e=>sale?setLinePrice(e.target.value):setLineCost(e.target.value)}/></label>
+        <label className="field"><span>Unit cost (KSh)</span><input type="number" min="0" step="0.01" value={lineCost} onChange={e=>setLineCost(e.target.value)}/></label>
         <button type="button" className="btn secondary" onClick={()=>void addLine()}>Add item</button>
       </div>
-      <div className="cart-list">{cart.length===0?<p className="muted compact-help">Add one or more line items above.</p>:cart.map((x,i)=>{const p=products.find(y=>y.id===x.product_id);const price=sale?x.unit_price:x.unit_cost;return <div className="cart-row" key={i}><span>{p?.name} × {x.quantity}</span><b>{money(Number(price)*x.quantity)}</b><button type="button" className="text-button" onClick={()=>setCart(v=>v.filter((_,j)=>j!==i))}>Remove</button></div>;})}</div>
-      <div className="form-actions"><button className="btn" disabled={saving||cart.length===0}>{saving?"Saving…":sale?"Complete sale":"Receive purchase and update stock"}</button></div>
+      <div className="cart-list">{cart.length===0?<p className="muted compact-help">Add the items received from your supplier.</p>:cart.map((x,i)=>{const p=products.find(y=>y.id===x.product_id);return <div className="cart-row" key={i}><span>{p?.name} × {x.quantity}</span><b>{money(Number(x.unit_cost)*x.quantity)}</b><button type="button" className="text-button" onClick={()=>setCart(v=>v.filter((_,j)=>j!==i))}>Remove</button></div>;})}</div>
+      <div className="checkout-total-row"><span>Purchase total</span><strong>{money(subtotal)}</strong></div>
+      <div className="form-actions"><button className="btn" disabled={saving||cart.length===0}>{saving?"Saving…":"Receive purchase and update stock"}</button></div>
+    </form>;
+
+    return <form className="panel workspace-form pos-checkout" onSubmit={transact}>
+      <div className="pos-heading">
+        <div><div className="eyebrow">Point of sale</div><h2>New sale</h2><p className="muted">Add items, review the total and take payment.</p></div>
+        <span className="pill pos-live"><span className="pos-live-dot"/> Ready to checkout</span>
+      </div>
+      <div className="pos-top-fields">
+        {select("Selling branch","branch_id",branches.filter(b=>b.status==="active").map(b=>({value:b.id,label:b.name})),true)}
+        {select("Customer","customer_id",customers.map(x=>({value:x.id,label:x.name})))}
+      </div>
+      <div className="pos-layout">
+        <section className="pos-items">
+          <div className="pos-section-title"><div><h3>Sale items</h3><p className="muted">Select products or services to add to this sale.</p></div><span className="pos-count">{cart.length} {cart.length===1?"item":"items"}</span></div>
+          <div className="pos-add-line">
+            <label className="field pos-product-field"><span>Product / service</span><select value={lineProduct} onChange={e=>{setLineProduct(e.target.value);const p=products.find(x=>x.id===e.target.value);setLinePrice(p?String(p.selling_price??0):"");}}><option value="">Search and select an item</option>{list.map(p=><option key={p.id} value={p.id}>{p.name} · {money(p.selling_price)}</option>)}</select></label>
+            <label className="field"><span>Qty</span><input type="number" min="0.001" step="0.001" value={lineQty} onChange={e=>setLineQty(e.target.value)}/></label>
+            <label className="field"><span>Unit price (KSh)</span><input type="number" min="0" step="0.01" value={linePrice} onChange={e=>setLinePrice(e.target.value)}/></label>
+            <button type="button" className="btn pos-add-button" onClick={()=>void addLine()}><span>＋</span> Add item</button>
+          </div>
+          <div className="pos-cart">
+            <div className="pos-cart-head"><span>ITEM</span><span>QTY</span><span>PRICE</span><span>AMOUNT</span><span/></div>
+            {cart.length===0?<div className="pos-empty"><span className="pos-empty-icon">🛒</span><strong>Your sale is empty</strong><p className="muted">Choose a product or service above to get started.</p></div>:cart.map((x,i)=>{const p=products.find(y=>y.id===x.product_id);return <div className="pos-cart-row" key={i}><div className="pos-item-name"><strong>{p?.name??"Item"}</strong><small>{p?.sku??p?.item_type??"Sale item"}</small></div><span>{x.quantity}</span><span>{money(x.unit_price)}</span><strong>{money(Number(x.unit_price)*x.quantity)}</strong><button type="button" className="pos-remove" aria-label={"Remove "+(p?.name??"item")} onClick={()=>setCart(v=>v.filter((_,j)=>j!==i))}>×</button></div>;})}
+          </div>
+          <label className="field pos-notes"><span>Sale notes (optional)</span><input value={form.notes??""} onChange={e=>set("notes",e.target.value)} placeholder="Add a note for this transaction"/></label>
+        </section>
+        <aside className="pos-payment">
+          <div className="pos-section-title"><div><h3>Payment</h3><p className="muted">Choose how the customer pays.</p></div></div>
+          <div className="pos-method-grid">{methods.map(m=><button type="button" key={m.value} className={"pos-method "+(form.payment_method===m.value?"selected":"")} onClick={()=>set("payment_method",m.value)}><span>{m.icon}</span><b>{m.label}</b></button>)}</div>
+          <div className="pos-summary">
+            <div className="pos-summary-line"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
+            <label className="pos-adjustment"><span>Discount (KSh)</span><input aria-label="Discount in Kenya shillings" type="number" min="0" step="0.01" value={form.discount??"0"} onChange={e=>set("discount",e.target.value)}/></label>
+            <label className="pos-adjustment"><span>Tax (KSh)</span><input aria-label="Tax in Kenya shillings" type="number" min="0" step="0.01" value={form.tax??"0"} onChange={e=>set("tax",e.target.value)}/></label>
+            <div className="pos-grand-total"><span>Total due</span><strong>{money(total)}</strong></div>
+            <label className="pos-received"><span>Amount received (KSh)</span><input type="number" min="0" step="0.01" value={form.amount_paid??""} onChange={e=>set("amount_paid",e.target.value)} placeholder={money(total).replace("KSh ","")}/><small>Leave blank if the customer pays the full amount.</small></label>
+            <div className={"pos-payment-result "+(balance>0?"is-balance":"is-change")}><span>{balance>0?"Balance remaining":"Change to give"}</span><strong>{money(balance>0?balance:change)}</strong></div>
+          </div>
+          <button className="btn pos-complete" disabled={saving||cart.length===0||!form.branch_id||total<=0||received<0}>{saving?"Processing sale…":"Complete sale  →"}</button>
+          <p className="pos-secure-note">Review the amount before completing. Stock updates when the sale is saved.</p>
+        </aside>
+      </div>
     </form>;
   }
 
