@@ -151,7 +151,7 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
 
   async function imageAsDataUrl(file: File) {
     if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
-    if (file.size > 5 * 1024 * 1024) throw new Error("Please use an image under 5 MB.");
+    if (file.size > 3 * 1024 * 1024) throw new Error("Please use an image under 3 MB.");
     return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Could not read the image."));
