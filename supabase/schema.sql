@@ -430,3 +430,121 @@ begin
 end;$seed$;
 
 -- SECURITY DEFINER implementations are private; exposed RPC wrappers are invoker functions.
+
+
+-- Index foreign keys that are frequently joined or changed.
+create index if not exists audit_logs_actor_user_idx on public.audit_logs(actor_user_id);
+create index if not exists memberships_branch_idx on public.business_memberships(branch_id);
+create index if not exists memberships_business_branch_idx on public.business_memberships(business_id,branch_id);
+create index if not exists subscriptions_updated_by_idx on public.business_subscriptions(updated_by);
+create index if not exists template_snapshots_applied_by_idx on public.business_template_snapshots(applied_by);
+create index if not exists template_snapshots_category_idx on public.business_template_snapshots(category_id);
+create index if not exists businesses_created_by_idx on public.businesses(created_by);
+create index if not exists invoices_subscription_idx on public.subscription_invoices(subscription_id);
+create index if not exists payments_confirmed_by_idx on public.subscription_payments(confirmed_by);
+create index if not exists payments_invoice_idx on public.subscription_payments(invoice_id);
+create index if not exists payments_subscription_idx on public.subscription_payments(subscription_id);
+create index if not exists category_templates_category_status_idx on public.category_templates(category_id,status,version desc);
+
+-- Consolidate read policies and separate write policies to avoid repeated RLS evaluation.
+drop policy if exists category_groups_admin on public.category_groups;
+drop policy if exists category_groups_admin_insert on public.category_groups;
+drop policy if exists category_groups_admin_update on public.category_groups;
+drop policy if exists category_groups_admin_delete on public.category_groups;
+create policy category_groups_admin_insert on public.category_groups for insert to authenticated with check(private.is_platform_admin());
+create policy category_groups_admin_update on public.category_groups for update to authenticated using(private.is_platform_admin()) with check(private.is_platform_admin());
+create policy category_groups_admin_delete on public.category_groups for delete to authenticated using(private.is_platform_admin());
+
+drop policy if exists business_categories_admin on public.business_categories;
+drop policy if exists business_categories_admin_insert on public.business_categories;
+drop policy if exists business_categories_admin_update on public.business_categories;
+drop policy if exists business_categories_admin_delete on public.business_categories;
+create policy business_categories_admin_insert on public.business_categories for insert to authenticated with check(private.is_platform_admin());
+create policy business_categories_admin_update on public.business_categories for update to authenticated using(private.is_platform_admin()) with check(private.is_platform_admin());
+create policy business_categories_admin_delete on public.business_categories for delete to authenticated using(private.is_platform_admin());
+
+drop policy if exists templates_admin on public.category_templates;
+drop policy if exists templates_admin_insert on public.category_templates;
+drop policy if exists templates_admin_update on public.category_templates;
+drop policy if exists templates_admin_delete on public.category_templates;
+create policy templates_admin_insert on public.category_templates for insert to authenticated with check(private.is_platform_admin());
+create policy templates_admin_update on public.category_templates for update to authenticated using(private.is_platform_admin()) with check(private.is_platform_admin());
+create policy templates_admin_delete on public.category_templates for delete to authenticated using(private.is_platform_admin());
+
+drop policy if exists platform_roles_admin_manage on public.platform_roles;
+drop policy if exists platform_roles_admin_insert on public.platform_roles;
+drop policy if exists platform_roles_admin_update on public.platform_roles;
+drop policy if exists platform_roles_admin_delete on public.platform_roles;
+create policy platform_roles_admin_insert on public.platform_roles for insert to authenticated with check(private.is_platform_admin());
+create policy platform_roles_admin_update on public.platform_roles for update to authenticated using(private.is_platform_admin()) with check(private.is_platform_admin());
+create policy platform_roles_admin_delete on public.platform_roles for delete to authenticated using(private.is_platform_admin());
+
+drop policy if exists businesses_member_or_platform on public.businesses;
+drop policy if exists businesses_agent_assigned_read on public.businesses;
+drop policy if exists businesses_read on public.businesses;
+create policy businesses_read on public.businesses for select to authenticated
+using(private.is_platform_admin() or private.is_business_member(id) or (private.is_platform_agent() and agent_user_id=(select auth.uid())));
+
+drop policy if exists branches_owner_manage on public.branches;
+drop policy if exists branches_owner_insert on public.branches;
+drop policy if exists branches_owner_update on public.branches;
+drop policy if exists branches_owner_delete on public.branches;
+create policy branches_owner_insert on public.branches for insert to authenticated with check(private.is_platform_admin() or private.is_business_owner(business_id));
+create policy branches_owner_update on public.branches for update to authenticated using(private.is_platform_admin() or private.is_business_owner(business_id)) with check(private.is_platform_admin() or private.is_business_owner(business_id));
+create policy branches_owner_delete on public.branches for delete to authenticated using(private.is_platform_admin() or private.is_business_owner(business_id));
+
+drop policy if exists memberships_owner_manage on public.business_memberships;
+drop policy if exists memberships_owner_insert on public.business_memberships;
+drop policy if exists memberships_owner_update on public.business_memberships;
+drop policy if exists memberships_owner_delete on public.business_memberships;
+create policy memberships_owner_insert on public.business_memberships for insert to authenticated with check(private.is_platform_admin() or private.is_business_owner(business_id));
+create policy memberships_owner_update on public.business_memberships for update to authenticated using(private.is_platform_admin() or private.is_business_owner(business_id)) with check(private.is_platform_admin() or private.is_business_owner(business_id));
+create policy memberships_owner_delete on public.business_memberships for delete to authenticated using(private.is_platform_admin() or private.is_business_owner(business_id));
+
+drop policy if exists snapshots_owner_manage on public.business_template_snapshots;
+drop policy if exists snapshots_owner_insert on public.business_template_snapshots;
+drop policy if exists snapshots_owner_update on public.business_template_snapshots;
+drop policy if exists snapshots_owner_delete on public.business_template_snapshots;
+create policy snapshots_owner_insert on public.business_template_snapshots for insert to authenticated with check(private.is_platform_admin() or private.is_business_owner(business_id));
+create policy snapshots_owner_update on public.business_template_snapshots for update to authenticated using(private.is_platform_admin() or private.is_business_owner(business_id)) with check(private.is_platform_admin() or private.is_business_owner(business_id));
+create policy snapshots_owner_delete on public.business_template_snapshots for delete to authenticated using(private.is_platform_admin() or private.is_business_owner(business_id));
+
+drop policy if exists subscriptions_admin_manage on public.business_subscriptions;
+drop policy if exists subscriptions_owner_read on public.business_subscriptions;
+drop policy if exists subscriptions_agent_assigned_read on public.business_subscriptions;
+drop policy if exists subscriptions_read on public.business_subscriptions;
+drop policy if exists subscriptions_admin_insert on public.business_subscriptions;
+drop policy if exists subscriptions_admin_update on public.business_subscriptions;
+drop policy if exists subscriptions_admin_delete on public.business_subscriptions;
+create policy subscriptions_read on public.business_subscriptions for select to authenticated
+using(private.is_platform_admin() or private.is_business_owner(business_id) or (private.is_platform_agent() and exists(select 1 from public.businesses b where b.id=business_subscriptions.business_id and b.agent_user_id=(select auth.uid()))));
+create policy subscriptions_admin_insert on public.business_subscriptions for insert to authenticated with check(private.is_platform_admin());
+create policy subscriptions_admin_update on public.business_subscriptions for update to authenticated using(private.is_platform_admin()) with check(private.is_platform_admin());
+create policy subscriptions_admin_delete on public.business_subscriptions for delete to authenticated using(private.is_platform_admin());
+
+drop policy if exists invoices_admin_manage on public.subscription_invoices;
+drop policy if exists invoices_owner_read on public.subscription_invoices;
+drop policy if exists invoices_read on public.subscription_invoices;
+drop policy if exists invoices_admin_insert on public.subscription_invoices;
+drop policy if exists invoices_admin_update on public.subscription_invoices;
+drop policy if exists invoices_admin_delete on public.subscription_invoices;
+create policy invoices_read on public.subscription_invoices for select to authenticated using(private.is_platform_admin() or private.is_business_owner(business_id));
+create policy invoices_admin_insert on public.subscription_invoices for insert to authenticated with check(private.is_platform_admin());
+create policy invoices_admin_update on public.subscription_invoices for update to authenticated using(private.is_platform_admin()) with check(private.is_platform_admin());
+create policy invoices_admin_delete on public.subscription_invoices for delete to authenticated using(private.is_platform_admin());
+
+drop policy if exists payments_admin_manage on public.subscription_payments;
+drop policy if exists payments_owner_read on public.subscription_payments;
+drop policy if exists payments_read on public.subscription_payments;
+drop policy if exists payments_admin_insert on public.subscription_payments;
+drop policy if exists payments_admin_update on public.subscription_payments;
+drop policy if exists payments_admin_delete on public.subscription_payments;
+create policy payments_read on public.subscription_payments for select to authenticated using(private.is_platform_admin() or private.is_business_owner(business_id));
+create policy payments_admin_insert on public.subscription_payments for insert to authenticated with check(private.is_platform_admin());
+create policy payments_admin_update on public.subscription_payments for update to authenticated using(private.is_platform_admin()) with check(private.is_platform_admin());
+create policy payments_admin_delete on public.subscription_payments for delete to authenticated using(private.is_platform_admin());
+
+drop policy if exists audit_logs_business_read on public.audit_logs;
+drop policy if exists audit_logs_admin_read on public.audit_logs;
+drop policy if exists audit_logs_read on public.audit_logs;
+create policy audit_logs_read on public.audit_logs for select to authenticated using(private.is_platform_admin() or (business_id is not null and private.is_business_owner(business_id)));
