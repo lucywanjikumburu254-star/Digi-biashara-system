@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -117,7 +117,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   const set = (key:string,value:string) => setForm(p=>({...p,[key]:value}));
   const notify = (s:string) => {setMessage(s);setError("");};
 
-  async function save(e:React.FormEvent<HTMLFormElement>) {
+  async function save(e:FormEvent<HTMLFormElement>) {
     e.preventDefault();setSaving(true);setError("");setMessage("");
     try {
       let table="";let record:any={business_id:businessId};
@@ -172,7 +172,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     setError("");setLineProduct("");setLineQty("1");setLinePrice("");setLineCost("");
   }
 
-  async function transact(e:React.FormEvent<HTMLFormElement>){
+  async function transact(e:FormEvent<HTMLFormElement>){
     e.preventDefault();setSaving(true);setError("");setMessage("");
     try{
       if(!cart.length) throw new Error("Add at least one item before saving.");
@@ -186,7 +186,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     finally{setSaving(false);}
   }
 
-  async function adjust(e:React.FormEvent<HTMLFormElement>){
+  async function adjust(e:FormEvent<HTMLFormElement>){
     e.preventDefault();setSaving(true);setError("");setMessage("");
     try{
       const r=await db.rpc("adjust_stock",{p_business_id:businessId,p_branch_id:form.branch_id,p_product_id:form.product_id,p_quantity_delta:Number(form.quantity),p_reason:form.notes});
@@ -201,7 +201,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   function select(label:string,key:string,opts:{value:string;label:string}[],required=false){
     return <label className="field" key={key}><span>{label}</span><select required={required} value={form[key]??""} onChange={e=>set(key,e.target.value)}><option value="">Select {label.toLowerCase()}</option>{opts.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
   }
-  function formPanel(children:React.ReactNode,onSubmit=save,button="Save record"){
+  function formPanel(children:ReactNode,onSubmit=save,button="Save record"){
     return <form className="panel workspace-form" onSubmit={onSubmit as any}><div className="panelhead"><h2>{editingId?"Edit record":"Add new record"}</h2>{editingId&&<button type="button" className="btn secondary small" onClick={reset}>Cancel edit</button>}</div><div className="form-grid">{children}</div><div className="form-actions"><button className="btn" disabled={saving}>{saving?"Saving…":button}</button></div></form>;
   }
   function editActions(r:Row){return <div className="row-actions"><button type="button" className="btn secondary small" onClick={()=>edit(r)}>Edit</button><button type="button" className="btn secondary small" disabled={saving} onClick={()=>void deactivate(r)}>Deactivate</button></div>;}
