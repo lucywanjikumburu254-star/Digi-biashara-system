@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only the business owner or administrator can use AI product recognition." }, { status: 403 });
     }
 
-    const match = image.match(/^data:(image\\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+    const match = image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
     if (!match) return NextResponse.json({ error: "Please upload a JPG, PNG or WebP image." }, { status: 400 });
     const estimatedBytes = Math.floor(match[2].length * 3 / 4);
     if (estimatedBytes > MAX_IMAGE_BYTES) return NextResponse.json({ error: "Image is too large. Please use an image under 3 MB." }, { status: 413 });
