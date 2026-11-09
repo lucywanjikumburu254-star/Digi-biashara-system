@@ -1,8 +1,8 @@
 import {redirect} from "next/navigation";
 import {createClient} from "@/lib/supabase/server";
 export default async function PlatformDashboard(){
- const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect("/login");
- const {data:role}=await s.from("platform_roles").select("role,full_name").eq("user_id",user.id).eq("status","active").maybeSingle();if(role?.role!=="super_admin")redirect("/login");
+ const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect("/platform/login");
+ const {data:role}=await s.from("platform_roles").select("role,full_name").eq("user_id",user.id).eq("status","active").maybeSingle();if(role?.role!=="super_admin")redirect("/platform/login");
  const [b,a,subs,pay]=await Promise.all([
   s.from("businesses").select("id",{count:"exact",head:true}),
   s.from("platform_roles").select("user_id",{count:"exact",head:true}).eq("role","agent"),
