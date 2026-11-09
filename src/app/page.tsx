@@ -1,1 +1,30 @@
-export default function Home() { return <main><header className="top"><div className="logo">DIGI<em>BIASHARA</em></div><div className="toplinks"><a href="/account/create">Create account</a><a href="/login">Sign in</a><a className="btn small" href="/register">Register business</a></div></header><section className="wrap"><div className="hero"><div className="eyebrow">Digital Kingdom Solutions</div><h1>Run every branch.<br/>Understand every sale.</h1><p>Bring products, services, branches, staff, stock and business performance together in a single workspace designed for Kenyan businesses.</p><div className="actions"><a className="btn" href="/register">Start your business setup</a><a className="btn secondary" href="/login">Sign in</a></div></div><div className="cards"><article className="card"><h3>One business, many branches</h3><p>Set up branch locations and manage operations with access assigned to the right people.</p></article><article className="card"><h3>150 business categories</h3><p>Choose from 15 business groups and 150 categories, each with a structured starting template.</p></article><article className="card"><h3>Designed for Kenya</h3><p>Kenyan Shilling defaults and M-Pesa-ready architecture for local businesses.</p></article></div></section><footer className="footer">© {new Date().getFullYear()} Digital Kingdom Solutions · Digi Biashara</footer></main>; }
+import Link from "next/link";
+
+export default function Home() {
+  return (
+    <main>
+      <header className="top">
+        <Link className="logo" href="/">DIGI<em>BIASHARA</em></Link>
+        <div className="toplinks">
+          <Link className="btn small" href="/login?portal=admin">Admin sign in</Link>
+        </div>
+      </header>
+      <section className="wrap">
+        <div className="hero">
+          <div className="eyebrow">Digital Kingdom Solutions</div>
+          <h1>Welcome to Digi Biashara</h1>
+          <p>Sign in to manage your business, branches, sales, stock and team from one place.</p>
+          <div className="actions">
+            <Link className="btn" href="/login">Sign in</Link>
+          </div>
+        </div>
+        <div className="cards">
+          <article className="card"><h3>Manage your branches</h3><p>Keep your business locations and teams connected.</p></article>
+          <article className="card"><h3>Track sales and stock</h3><p>See business activity and inventory in one workspace.</p></article>
+          <article className="card"><h3>Built for Kenyan businesses</h3><p>Designed around local business needs and Kenyan Shillings.</p></article>
+        </div>
+      </section>
+      <footer className="footer">© {new Date().getFullYear()} Digital Kingdom Solutions · Digi Biashara</footer>
+    </main>
+  );
+}
