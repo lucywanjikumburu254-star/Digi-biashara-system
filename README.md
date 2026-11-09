@@ -19,5 +19,5 @@ Next.js App Router, TypeScript, Supabase Auth/Postgres/RLS, Vercel.
 ## Security
 Tenant records are protected by Supabase Row Level Security. Owner registration uses a constrained database RPC. Do not put a service-role key into browser code. Agent attribution cannot be self-assigned. A suspended subscription does not delete tenant data.
 
-## Delivery status
+## Deployment\nThe Vercel project is `digi-biashara-fresh`. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in its project environment before deploying. Keep this project separate from the earlier production deployment.\n\n## Delivery status
 This first stage delivers the secure tenant and platform foundation, authentication entry points, category catalogue, and account/subscription records. Sales/POS, inventory, M-Pesa callback verification, attendance, purchasing, and specialist category workflows remain to be implemented and tested before customer use.
