@@ -13,7 +13,7 @@ export default async function EmployeeDashboard(){
     .eq("user_id",user.id).eq("role","employee").eq("status","active")
     .order("created_at",{ascending:true}).limit(1).maybeSingle();
 
-  if(error||!m||!m.branch_id||m.permissions?.sales===false) redirect("/login");
+  if(error||!m||!m.branch_id||m.permissions?.sales!==true) redirect("/login");
   const business:any=m.businesses;
   const subscription=Array.isArray(business?.subscription)?business.subscription[0]:business?.subscription;
   if(business?.status!=="active"||!["active","trial","payment_due","grace_period"].includes(subscription?.status)){
