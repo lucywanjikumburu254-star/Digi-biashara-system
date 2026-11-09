@@ -94,3 +94,27 @@
 
 /* Cash and M-Pesa are the supported POS tender options. */
 .pos-method-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pos-mpesa-code{margin:0 0 14px}.pos-mpesa-code small{font-size:11px;color:var(--muted)}
+
+
+/* Digi Biashara subscription and suspension screens */
+.schedule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.schedule-grid .field{margin:8px 0}
+.notice-info{background:#eaf2ff;border:1px solid #d5e3ff;color:#153b73;border-radius:10px;padding:13px 15px;font-size:13px;line-height:1.5;margin:8px 0 14px}
+.schedule-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.schedule-actions label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.trial-edit{display:grid;gap:6px;margin-top:7px;min-width:180px}
+.trial-edit input{border:1px solid var(--line);border-radius:7px;padding:7px;font-size:11px;max-width:190px}
+.payment-reminder{background:#fff6e6;border:1px solid #f4d89e;color:#654313;border-radius:12px;padding:17px 19px;margin:15px 0;line-height:1.55}
+.payment-reminder p{margin:7px 0 12px;font-size:13px}
+.notification-row{padding:13px 0;border-bottom:1px solid var(--line)}
+.notification-row:last-child{border-bottom:0}
+.notification-row p{font-size:13px;color:var(--muted);line-height:1.5;margin:6px 0}
+.notification-row small{font-size:11px;color:var(--muted)}
+.suspension-page{min-height:calc(100vh - 70px);display:flex;align-items:center;justify-content:center;padding:28px}
+.suspension-card{width:min(560px,100%);background:#fff;border:1px solid var(--line);border-radius:20px;padding:38px;text-align:center;box-shadow:0 15px 50px #142d3310}
+.suspension-lock{width:82px;height:82px;border-radius:50%;background:#ffeded;color:#bd2525;display:grid;place-items:center;font-size:58px;font-weight:300;margin:0 auto 22px}
+.suspension-card h1{font-size:32px;margin:10px 0}
+.suspension-card>p{color:var(--muted);font-size:14px;line-height:1.65}
+.suspension-amount{display:flex;justify-content:space-between;gap:12px;background:#fff0f0;color:#8e2828;border-radius:10px;padding:14px 16px;margin:20px 0;text-align:left;font-size:13px}
+.suspension-amount strong{font-size:18px}
+@media(max-width:650px){.schedule-grid{grid-template-columns:1fr}.schedule-actions{align-items:flex-start;flex-direction:column}.suspension-page{padding:14px}.suspension-card{padding:25px 18px}.suspension-card h1{font-size:26px}.trial-edit{min-width:150px}}
