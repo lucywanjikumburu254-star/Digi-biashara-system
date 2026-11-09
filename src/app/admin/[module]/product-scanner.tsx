@@ -19,7 +19,7 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
   const [problem, setProblem] = useState("");
   const [barcode, setBarcode] = useState("");
   const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [cameraSupported, setCameraSupported] = useState(true);
+
 
   useEffect(() => () => stopCamera(), []);
 
@@ -37,9 +37,9 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
       streamRef.current = stream;
       if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+      if (!(window as any).BarcodeDetector) setNotice("Your browser can open the camera but does not support automatic barcode detection. Enter the barcode number below.");
       setRunning(true);
     } catch (e) {
-      setCameraSupported(false);
       setProblem(e instanceof Error ? e.message : "Could not open the camera.");
     }
   }
@@ -141,9 +141,18 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
       for (const line of lines) {
         if (/^(product|item|name|description|quantity|qty|stock|buying|selling|price|total|no\\.?|s\\/?no\\.?)$/i.test(line)) continue;
         const parts = line.split(/[\\t,;|]+/).map((x: string) => x.trim()).filter(Boolean);
-        const name = parts[0]?.replace(/^[-*•\\d.) ]+/, "").trim();
+        let name = parts[0] || "";
+        let values = parts.slice(1);
+        if (parts.length === 1) {
+          const words = line.replace(/^[-*•\\d.) ]+/, "").trim().split(/\\s+/);
+          const trailing: string[] = [];
+          while (words.length && trailing.length < 3 && /^\\d+(?:[.,]\\d{1,2})?$/.test(words[words.length - 1])) trailing.unshift(words.pop()!);
+          name = words.join(" ");
+          values = trailing;
+        }
+        name = name.replace(/^[-*•\\d.) ]+/, "").trim();
         if (!name || name.length < 2 || /^(page|date|shop|stock list)$/i.test(name)) continue;
-        const numbers = parts.slice(1).map((x: string) => Number(x.replace(/[^0-9.]/g, ""))).filter((n: number) => Number.isFinite(n) && n >= 0);
+        const numbers = values.map((x: string) => Number(x.replace(/[^0-9.]/g, ""))).filter((n: number) => Number.isFinite(n) && n >= 0);
         parsed.push({ id: "new-" + Date.now() + "-" + parsed.length, name, sku: "", barcode: "", category: "", unit: "piece", quantity: numbers[0] !== undefined ? String(numbers[0]) : "0", cost_price: numbers[1] !== undefined ? String(numbers[1]) : "", selling_price: numbers[2] !== undefined ? String(numbers[2]) : "" });
       }
       if (!parsed.length) throw new Error("No product rows were recognised. Try a clearer, well-lit photo with one page filling the frame, or type the product names manually.");
