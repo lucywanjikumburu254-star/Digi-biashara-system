@@ -6,7 +6,7 @@ export default function Home() {
       <header className="top">
         <Link className="logo" href="/">DIGI<em>BIASHARA</em></Link>
         <div className="toplinks">
-          <Link className="btn small" href="/login?portal=admin">Admin sign in</Link>
+          <Link className="btn small" href="/platform/login">Admin &amp; agent sign in</Link>
         </div>
       </header>
       <section className="wrap">
@@ -15,7 +15,7 @@ export default function Home() {
           <h1>Welcome to Digi Biashara</h1>
           <p>Sign in to manage your business, branches, sales, stock and team from one place.</p>
           <div className="actions">
-            <Link className="btn" href="/login">Sign in</Link>
+            <Link className="btn" href="/login">Business owner sign in</Link>
           </div>
         </div>
         <div className="cards">
