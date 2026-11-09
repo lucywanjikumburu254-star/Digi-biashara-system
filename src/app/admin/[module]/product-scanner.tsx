@@ -76,6 +76,10 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
 
   async function saveDraft(draft: Draft) {
     if (!draft.name.trim()) throw new Error("Enter a product name before saving this draft.");
+    const duplicateQuery = db.from("products").select("id,name,barcode").eq("business_id", businessId);
+    const duplicate = draft.barcode.trim() ? await duplicateQuery.eq("barcode", draft.barcode.trim()).maybeSingle() : await duplicateQuery.ilike("name", draft.name.trim()).maybeSingle();
+    if (duplicate.error) throw duplicate.error;
+    if (duplicate.data) throw new Error("A product with this name or barcode already exists: " + duplicate.data.name + ". Check your catalogue instead of adding a duplicate.");
     const { data: auth } = await db.auth.getUser();
     const payload = {
       business_id: businessId, name: draft.name.trim(), sku: draft.sku.trim() || null,
