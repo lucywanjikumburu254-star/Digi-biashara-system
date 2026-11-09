@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Draft = { id: string; name: string; sku: string; barcode: string; category: string; unit: string; cost_price: string; selling_price: string; quantity: string; status?: string };
-type Mode = "barcode" | "photo" | "paper";
+type Mode = "barcode" | "photo" | "paper";\ntype Branch = { id: string; name: string };
 
 declare global { interface Window { Tesseract?: any } }
 
@@ -18,10 +18,10 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
   const [notice, setNotice] = useState("");
   const [problem, setProblem] = useState("");
   const [barcode, setBarcode] = useState("");
-  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [drafts, setDrafts] = useState<Draft[]>([]);\n  const [branches, setBranches] = useState<Branch[]>([]);\n  const [selectedBranch, setSelectedBranch] = useState("");
 
 
-  useEffect(() => () => stopCamera(), []);
+  useEffect(() => { void db.from("branches").select("id,name").eq("business_id", businessId).eq("status", "active").order("name").then(({data}) => setBranches((data || []) as Branch[])); }, [businessId]);\n  useEffect(() => () => stopCamera(), []);
 
   function stopCamera() {
     streamRef.current?.getTracks().forEach(track => track.stop());
@@ -195,7 +195,7 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
     {busy && <div className="scanner-status">{notice || "Processing…"}</div>}
     {notice && !busy && <div className="success">{notice}</div>}
     {problem && <div className="error" role="alert">{problem}</div>}
-    {drafts.length > 0 && <div className="scanner-drafts"><div className="panelhead"><div><h3>Review recognised products ({drafts.length})</h3><p className="muted">Edit details, then save as a draft or activate. Prices are never guessed.</p></div></div>
+    {drafts.length > 0 && <div className="scanner-drafts"><div className="panelhead"><div><h3>Review recognised products ({drafts.length})</h3><p className="muted">Edit details, then activate. Recognised rows are saved as inactive drafts automatically; prices are never guessed.</p></div></div>\n      <label className="field scanner-branch"><span>Branch for opening stock</span><select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)}><option value="">Choose branch when importing quantities</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
       {drafts.map(d => <div className="scanner-draft" key={d.id}>
         <label className="field"><span>Product name</span><input value={d.name} onChange={e => changeDraft(d.id, "name", e.target.value)} /></label>
         <label className="field"><span>Barcode</span><input value={d.barcode} onChange={e => changeDraft(d.id, "barcode", e.target.value)} /></label>
