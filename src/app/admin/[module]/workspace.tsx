@@ -321,7 +321,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
       {field("Job title","job_title")}
       {select("Assigned branch","branch_id",branches.filter(b=>b.status==="active").map(b=>({value:b.id,label:b.name})),true)}
       <p className="muted compact-help">Staff accounts can sign in to Digi Biashara and access Sales / POS only for their assigned branch.</p>
-    </>);
+    </>,save,editingId?"Save staff details":"Create staff login");
     if(moduleName==="expenses") return formPanel(<>{field("Expense category","category_expense","text",true,"e.g. Rent, electricity, transport")}{field("Description","description","text",true)}{field("Amount (KSh)","amount","number",true)}{select("Branch","branch_id",branches.map(b=>({value:b.id,label:b.name})))}{select("Payment method","payment_method",["cash","mpesa","card","bank","other"].map(v=>({value:v,label:v.toUpperCase()})),true)}{field("Expense date","expense_date","date",true)}{field("Notes","notes")}</>);
     if(moduleName==="inventory") return formPanel(<>{select("Branch","branch_id",branches.filter(b=>b.status==="active").map(b=>({value:b.id,label:b.name})),true)}{select("Stocked product","product_id",products.filter(p=>p.item_type==="product"&&p.track_stock).map(p=>({value:p.id,label:p.name})),true)}{field("Quantity change (+ add / − remove)","quantity","number",true,"e.g. 10 or -2")}{field("Reason for adjustment","notes","text",true)}</>,adjust,"Save stock adjustment");
     if(moduleName==="sales") return transactionForm(true);
