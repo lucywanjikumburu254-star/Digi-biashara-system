@@ -54,7 +54,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     const salon = /salon|beauty|barber|spa/i.test(categoryName);
     setEditingId(null);
     setForm({
-      name:"",sku:"",barcode:"",item_type:salon?"service":"product",category:"",unit:"piece",
+      name:"",sku:"",barcode:"",item_type:salon?"service":"product",category:"",unit:"piece",password:"",
       cost_price:"0",selling_price:"0",reorder_level:"0",track_stock:salon?"false":"true",
       address:"",phone:"",opening_time:"",closing_time:"",email:"",notes:"",
       contact_person:"",job_title:"",employment_type:"permanent",monthly_salary:"0",
@@ -126,7 +126,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
       if(moduleName==="catalog"){table="products";Object.assign(record,{name:form.name,sku:form.sku||null,barcode:form.barcode||null,description:form.description||null,item_type:form.item_type,category:form.category||null,unit:form.unit||"piece",cost_price:Number(form.cost_price||0),selling_price:Number(form.selling_price||0),reorder_level:Number(form.reorder_level||0),track_stock:form.item_type==="service"?false:form.track_stock==="true",created_by:(await db.auth.getUser()).data.user?.id});}
       if(moduleName==="customers"){table="customers";Object.assign(record,{name:form.name,phone:form.phone||null,email:form.email||null,notes:form.notes||null});}
       if(moduleName==="suppliers"){table="suppliers";Object.assign(record,{name:form.name,contact_person:form.contact_person||null,phone:form.phone||null,email:form.email||null,address:form.address||null,notes:form.notes||null});}
-      if(moduleName==="staff"){table="business_staff";Object.assign(record,{full_name:form.name,branch_id:form.branch_id||null,email:form.email||null,phone:form.phone||null,job_title:form.job_title||null,employment_type:form.employment_type,monthly_salary:Number(form.monthly_salary||0),notes:form.notes||null,created_by:(await db.auth.getUser()).data.user?.id});}
+      if(moduleName==="staff"){table="business_staff";Object.assign(record,{full_name:form.name,branch_id:form.branch_id||null,email:form.email||null,phone:form.phone||null,job_title:form.job_title||"Sales staff",employment_type:"permanent",monthly_salary:0,notes:form.notes||null,created_by:(await db.auth.getUser()).data.user?.id});}
       if(moduleName==="expenses"){
         const {data:{user}}=await db.auth.getUser();
         const r=await db.from("expenses").insert({business_id:businessId,branch_id:form.branch_id||null,category:form.category_expense,description:form.description,amount:Number(form.amount),payment_method:form.payment_method,expense_date:form.expense_date,notes:form.notes||null,created_by:user?.id});
@@ -138,9 +138,27 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
         const r=await db.from("appointments").insert({business_id:businessId,branch_id:form.branch_id,customer_id:form.customer_id||null,service_id:form.service_id,staff_id:form.staff_id||null,starts_at:new Date(form.starts_at).toISOString(),ends_at:form.ends_at?new Date(form.ends_at).toISOString():null,notes:form.notes||null,created_by:user?.id});
         if(r.error) throw r.error;reset();notify("Appointment booked.");await load();return;
       }
+      if(moduleName==="staff" && !editingId){
+        if(!form.password || form.password.length<8) throw new Error("Set a password with at least 8 characters.");
+        if(!form.email.trim()) throw new Error("Enter the staff member's email address.");
+        if(!form.branch_id) throw new Error("Assign the staff member to a branch.");
+        const {error:inviteError}=await db.functions.invoke("create-staff-user",{body:{
+          business_id:businessId,branch_id:form.branch_id,full_name:form.name,email:form.email,
+          password:form.password,phone:form.phone,job_title:form.job_title
+        }});
+        if(inviteError) throw inviteError;
+        reset();notify("Staff login created. They can now sign in using the email and password you set.");await load();return;
+      }
       if(!table) throw new Error("Use the transaction form for this module.");
       const result=editingId?await db.from(table).update(record).eq("id",editingId).eq("business_id",businessId):await db.from(table).insert(record);
       if(result.error) throw result.error;
+      if(moduleName==="staff" && editingId){
+        const staffRow=rows.find(x=>x.id===editingId);
+        if(staffRow?.user_id){
+          const {error:membershipUpdateError}=await db.from("business_memberships").update({branch_id:form.branch_id||null}).eq("business_id",businessId).eq("user_id",staffRow.user_id).eq("role","employee");
+          if(membershipUpdateError) throw membershipUpdateError;
+        }
+      }
       reset();notify(editingId?"Changes saved.":"Record created.");await load();
     } catch(e){setError(e instanceof Error?e.message:"Unable to save this record.");}
     finally{setSaving(false);}
@@ -157,7 +175,13 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
       let r:any;
       if(moduleName==="branches") r=await db.from("branches").update({status:"disabled"}).eq("id",row.id).eq("business_id",businessId);
       else if(moduleName==="catalog") r=await db.from("products").update({is_active:false}).eq("id",row.id).eq("business_id",businessId);
-      else if(moduleName==="staff") r=await db.from("business_staff").update({status:"inactive"}).eq("id",row.id).eq("business_id",businessId);
+      else if(moduleName==="staff"){
+        r=await db.from("business_staff").update({status:"inactive"}).eq("id",row.id).eq("business_id",businessId);
+        if(!r.error && row.user_id){
+          const membershipUpdate=await db.from("business_memberships").update({status:"inactive"}).eq("business_id",businessId).eq("user_id",row.user_id).eq("role","employee");
+          if(membershipUpdate.error) throw membershipUpdate.error;
+        }
+      }
       else throw new Error("This record cannot be deactivated here.");
       if(r.error) throw r.error;notify("Record deactivated.");await load();
     }catch(e){setError(e instanceof Error?e.message:"Unable to deactivate record.");}
@@ -289,7 +313,15 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     if(moduleName==="catalog") return formPanel(<>{field("Product / service name","name","text",true)}{field("SKU / reference","sku")}{field("Barcode","barcode")}{select("Item type","item_type",[{value:"product",label:"Stocked product"},{value:"service",label:"Service / non-stock item"}],true)}{field("Category","category")}{field("Unit","unit")}{field("Cost price (KSh)","cost_price","number")}{field("Selling price (KSh)","selling_price","number")}{field("Reorder level","reorder_level","number")}{select("Track stock?","track_stock",[{value:"true",label:"Yes"},{value:"false",label:"No"}])}{field("Description","description")}</>);
     if(moduleName==="customers") return formPanel(<>{field("Customer name","name","text",true)}{field("Phone","phone")}{field("Email","email","email")}{field("Notes","notes")}</>);
     if(moduleName==="suppliers") return formPanel(<>{field("Supplier / company name","name","text",true)}{field("Contact person","contact_person")}{field("Phone","phone")}{field("Email","email","email")}{field("Address","address")}{field("Notes","notes")}</>);
-    if(moduleName==="staff") return formPanel(<>{field("Full name","name","text",true)}{field("Email","email","email")}{field("Phone","phone")}{field("Job title","job_title")}{select("Assigned branch","branch_id",branches.map(b=>({value:b.id,label:b.name})))}{select("Employment type","employment_type",["permanent","part_time","casual","contract"].map(v=>({value:v,label:v.replace("_"," ")})))}{field("Monthly salary (KSh)","monthly_salary","number")}{field("Notes","notes")}</>);
+    if(moduleName==="staff") return formPanel(<>
+      {field("Full name","name","text",true)}
+      {editingId?<label className="field"><span>Login email</span><input type="email" value={form.email??""} readOnly/></label>:field("Login email","email","email",true)}
+      {!editingId&&field("Set password (minimum 8 characters)","password","password",true)}
+      {field("Phone","phone")}
+      {field("Job title","job_title")}
+      {select("Assigned branch","branch_id",branches.filter(b=>b.status==="active").map(b=>({value:b.id,label:b.name})),true)}
+      <p className="muted compact-help">Staff accounts can sign in to Digi Biashara and access Sales / POS only for their assigned branch.</p>
+    </>);
     if(moduleName==="expenses") return formPanel(<>{field("Expense category","category_expense","text",true,"e.g. Rent, electricity, transport")}{field("Description","description","text",true)}{field("Amount (KSh)","amount","number",true)}{select("Branch","branch_id",branches.map(b=>({value:b.id,label:b.name})))}{select("Payment method","payment_method",["cash","mpesa","card","bank","other"].map(v=>({value:v,label:v.toUpperCase()})),true)}{field("Expense date","expense_date","date",true)}{field("Notes","notes")}</>);
     if(moduleName==="inventory") return formPanel(<>{select("Branch","branch_id",branches.filter(b=>b.status==="active").map(b=>({value:b.id,label:b.name})),true)}{select("Stocked product","product_id",products.filter(p=>p.item_type==="product"&&p.track_stock).map(p=>({value:p.id,label:p.name})),true)}{field("Quantity change (+ add / − remove)","quantity","number",true,"e.g. 10 or -2")}{field("Reason for adjustment","notes","text",true)}</>,adjust,"Save stock adjustment");
     if(moduleName==="sales") return transactionForm(true);
@@ -303,7 +335,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     if(moduleName==="catalog") return <table className="table"><thead><tr><th>Name</th><th>Type</th><th>SKU</th><th>Cost</th><th>Price</th><th>Track stock</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.name}</b><small>{r.category??""}</small></td><td>{r.item_type}</td><td>{r.sku??"—"}</td><td>{money(r.cost_price)}</td><td>{money(r.selling_price)}</td><td>{r.track_stock?"Yes":"No"}</td><td>{editActions(r)}</td></tr>)}</tbody></table>;
     if(moduleName==="customers") return <table className="table"><thead><tr><th>Customer</th><th>Phone</th><th>Email</th><th>Notes</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.name}</td><td>{r.phone??"—"}</td><td>{r.email??"—"}</td><td>{r.notes??"—"}</td><td><button className="btn secondary small" onClick={()=>edit(r)}>Edit</button></td></tr>)}</tbody></table>;
     if(moduleName==="suppliers") return <table className="table"><thead><tr><th>Supplier</th><th>Contact</th><th>Phone</th><th>Email</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.name}</td><td>{r.contact_person??"—"}</td><td>{r.phone??"—"}</td><td>{r.email??"—"}</td><td><button className="btn secondary small" onClick={()=>edit(r)}>Edit</button></td></tr>)}</tbody></table>;
-    if(moduleName==="staff") return <table className="table"><thead><tr><th>Staff member</th><th>Role</th><th>Branch</th><th>Phone</th><th>Monthly pay</th><th>Status</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.full_name}<small>{r.email??""}</small></td><td>{r.job_title??"—"}</td><td>{r.branches?.name??"All / not assigned"}</td><td>{r.phone??"—"}</td><td>{money(r.monthly_salary)}</td><td>{r.status}</td><td>{r.status==="active"&&editActions(r)}</td></tr>)}</tbody></table>;
+    if(moduleName==="staff") return <table className="table"><thead><tr><th>Staff member</th><th>Login email</th><th>Branch</th><th>Phone</th><th>Access</th><th>Status</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.full_name}</b><small>{r.job_title??"Sales staff"}</small></td><td>{r.email??"—"}</td><td>{r.branches?.name??"Not assigned"}</td><td>{r.phone??"—"}</td><td><span className="pill">Sales only</span></td><td>{r.status}</td><td>{r.status==="active"&&editActions(r)}</td></tr>)}</tbody></table>;
     if(moduleName==="sales") return <table className="table"><thead><tr><th>Sale number</th><th>Date</th><th>Customer</th><th>Branch</th><th>Total</th><th>Paid</th><th>Balance</th><th>Method</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><Link className="sale-link" href={"/admin/sales/"+r.id}>{r.sale_number}</Link></td><td>{stamp(r.created_at)}</td><td>{r.customers?.name??"Walk-in"}</td><td>{r.branches?.name??"—"}</td><td>{money(r.total)}</td><td>{money(r.amount_paid)}</td><td>{money(r.balance)}</td><td>{r.payment_method}</td></tr>)}</tbody></table>;
     if(moduleName==="inventory") return <table className="table"><thead><tr><th>Item</th><th>SKU</th><th>Branch</th><th>Available</th><th>Reorder level</th><th>Stock status</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.products?.name??"—"}</td><td>{r.products?.sku??"—"}</td><td>{r.branches?.name??"—"}</td><td>{Number(r.quantity).toLocaleString("en-KE")} {r.products?.unit??""}</td><td>{r.products?.reorder_level??0}</td><td>{Number(r.quantity)<=Number(r.products?.reorder_level??0)?<span className="pill warn">Reorder</span>:<span className="pill">In stock</span>}</td></tr>)}</tbody></table>;
     if(moduleName==="purchases") return <table className="table"><thead><tr><th>Purchase no.</th><th>Date</th><th>Supplier</th><th>Branch</th><th>Items</th><th>Total</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.purchase_number}</td><td>{stamp(r.created_at)}</td><td>{r.suppliers?.name??"—"}</td><td>{r.branches?.name??"—"}</td><td>{(r.purchase_items??[]).map((x:Row)=>x.products?.name??"Item").join(", ")}</td><td>{money(r.total)}</td></tr>)}</tbody></table>;
@@ -330,6 +362,6 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
       {loading?<div className="empty">Loading records…</div>:rows.length===0?<div className="empty">No records yet. Use the form above to add your first record.</div>:moduleName==="reports"?<div className="empty">Summary is calculated from saved transactions.</div>:<div className="table-wrap">{renderList()}</div>}
     </div>
     {moduleName==="inventory"&&<div className="panel"><h2>Stock tracking</h2><p className="muted">Sales reduce stock, received purchases increase stock, and manual adjustments create an auditable movement. Add stocked products in Products & services first.</p></div>}
-    {moduleName==="staff"&&<div className="panel"><h2>Staff sign-in access</h2><p className="muted">This page maintains the staff directory, employment details and branch assignments. A staff directory record does not create login credentials. Employee login invitations and detailed permission controls must be configured separately before staff can sign in.</p></div>}
+    {moduleName==="staff"&&<div className="panel"><h2>Employee access rules</h2><p className="muted">Each employee signs in with the email and password set by the owner. Their workspace is limited to Sales / POS and their assigned branch. Deactivating a staff member also disables their business membership.</p></div>}
   </section></main></div>;
 }
