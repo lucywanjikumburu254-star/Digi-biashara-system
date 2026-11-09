@@ -149,53 +149,75 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
     return window.Tesseract;
   }
 
-  async function scanPaper(file: File) {
-    setBusy(true); setProblem(""); setNotice("Reading the page. Handwriting may need corrections…");
-    try {
-      const Tesseract = await ensureTesseract();
-      const result = await Tesseract.recognize(file, "eng", { logger: (m: any) => { if (m.status === "recognizing text") setNotice("Reading page… " + Math.round((m.progress || 0) * 100) + "%"); } });
-      const lines = String(result.data.text || "").split(/\r?\n/).map((x: string) => x.trim()).filter(Boolean);
-      const parsed: Draft[] = [];
-      for (const line of lines) {
-        if (/^(product|item|name|description|quantity|qty|stock|buying|selling|price|total|no\.?|s\/?no\.?)$/i.test(line)) continue;
-        const parts = line.split(/[\t,;|]+/).map((x: string) => x.trim()).filter(Boolean);
-        let name = parts[0] || "";
-        let values = parts.slice(1);
-        if (parts.length === 1) {
-          const words = line.replace(/^[-*•\d.) ]+/, "").trim().split(/\s+/);
-          const trailing: string[] = [];
-          while (words.length && trailing.length < 3 && /^\d+(?:[.,]\d{1,2})?$/.test(words[words.length - 1])) trailing.unshift(words.pop()!);
-          name = words.join(" ");
-          values = trailing;
-        }
-        name = name.replace(/^[-*•\d.) ]+/, "").trim();
-        if (!name || name.length < 2 || /^(page|date|shop|stock list)$/i.test(name)) continue;
-        const numbers = values.map((x: string) => Number(x.replace(/[^0-9.]/g, ""))).filter((n: number) => Number.isFinite(n) && n >= 0);
-        parsed.push({ id: "new-" + Date.now() + "-" + parsed.length, name, sku: "", barcode: "", category: "", unit: "piece", quantity: numbers[0] !== undefined ? String(numbers[0]) : "0", cost_price: numbers[1] !== undefined ? String(numbers[1]) : "", selling_price: numbers[2] !== undefined ? String(numbers[2]) : "" });
+  async function imageAsDataUrl(file: File) {
+    if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
+    if (file.size > 5 * 1024 * 1024) throw new Error("Please use an image under 5 MB.");
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Could not read the image."));
+      reader.onerror = () => reject(new Error("Could not read the image."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function recogniseWithAI(file: File, scanMode: "photo" | "paper") {
+    const image = await imageAsDataUrl(file);
+    const response = await fetch("/api/ai/product-recognition", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ businessId, mode: scanMode, image })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "AI product recognition failed.");
+    return Array.isArray(result.products) ? result.products : [];
+  }
+
+  async function saveRecognisedRows(rows: any[], emptyMessage: string) {
+    if (!rows.length) throw new Error(emptyMessage);
+    const parsed: Draft[] = rows.map((p: any, index: number) => ({
+      id: "new-" + Date.now() + "-" + index,
+      name: String(p.name || "").slice(0, 180),
+      sku: String(p.sku || ""),
+      barcode: String(p.barcode || ""),
+      category: [p.brand, p.category].filter(Boolean).join(" · "),
+      unit: String(p.unit || "piece"),
+      quantity: /^\\d+(?:\\.\\d+)?$/.test(String(p.quantity || "")) ? String(p.quantity) : "0",
+      cost_price: /^\\d+(?:\\.\\d+)?$/.test(String(p.cost_price || "")) ? String(p.cost_price) : "",
+      selling_price: /^\\d+(?:\\.\\d+)?$/.test(String(p.selling_price || "")) ? String(p.selling_price) : "",
+      status: "AI recognised · review details"
+    }));
+    setDrafts(prev => [...prev, ...parsed]);
+    let savedCount = 0;
+    for (const draft of parsed) {
+      try {
+        await saveDraft(draft);
+        savedCount++;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Needs review before saving";
+        setDrafts(prev => prev.map(item => item.id === draft.id ? { ...item, status: message.slice(0, 90) } : item));
       }
-      if (!parsed.length) throw new Error("No product rows were recognised. Try a clearer, well-lit photo with one page filling the frame, or type the product names manually.");
-      setDrafts(prev => [...prev, ...parsed]);
-      let savedCount = 0;
-      for (const draft of parsed) { try { await saveDraft(draft); savedCount++; } catch { /* keep failed entries editable for duplicate correction */ } }
-      setNotice(parsed.length + " product rows recognised; " + savedCount + " saved automatically as drafts. Check every name, quantity and price before activating.");
-    } catch (e) { setProblem(e instanceof Error ? e.message : "Could not read this page."); }
-    finally { setBusy(false); }
+    }
+    setNotice(parsed.length + " product" + (parsed.length === 1 ? "" : "s") + " recognised by AI; " + savedCount + " saved as inactive drafts. Review every field before activating.");
+  }
+
+  async function scanPaper(file: File) {
+    setBusy(true); setProblem(""); setNotice("AI is reading the product list…");
+    try {
+      const rows = await recogniseWithAI(file, "paper");
+      await saveRecognisedRows(rows, "No clear product rows were found. Retake the page photo with better lighting, keep the page flat, and include the full list.");
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : "AI could not read this page.");
+    } finally { setBusy(false); }
   }
 
   async function scanPhoto(file: File) {
-    setBusy(true); setProblem(""); setNotice("Checking the product label…");
+    setBusy(true); setProblem(""); setNotice("AI is identifying the product…");
     try {
-      const Tesseract = await ensureTesseract();
-      const result = await Tesseract.recognize(file, "eng");
-      const lines = String(result.data.text || "").split(/\r?\n/).map((x: string) => x.trim()).filter(x => x.length > 2);
-      const name = lines.sort((a: string, b: string) => b.length - a.length)[0] || "";
-      if (!name) throw new Error("The label text was not clear enough. Try a closer, brighter photo or use barcode scan.");
-      const draft: Draft = { id: "new-" + Date.now(), name: name.slice(0, 100), sku: "", barcode: "", category: "", unit: "piece", cost_price: "", selling_price: "", quantity: "0" };
-      setDrafts(prev => [...prev, draft]);
-      try { await saveDraft(draft); } catch { /* keep draft editable if a duplicate needs review */ }
-      setNotice("Label text extracted and saved as a draft where no duplicate exists. Full AI visual product identification still needs an AI provider key.");
-    } catch (e) { setProblem(e instanceof Error ? e.message : "Could not read product label."); }
-    finally { setBusy(false); }
+      const rows = await recogniseWithAI(file, "photo");
+      await saveRecognisedRows(rows, "The AI could not confidently identify a product. Try a clearer photo showing the full package and label.");
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : "AI product recognition failed.");
+    } finally { setBusy(false); }
   }
 
   return <section className="panel product-scanner">
@@ -212,7 +234,7 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
       <div className="scanner-manual"><input value={barcode} onChange={e => setBarcode(e.target.value)} placeholder="Enter barcode number" inputMode="numeric" /><button type="button" className="btn" disabled={busy || !barcode.trim()} onClick={() => void lookupBarcode(barcode)}>Find product</button></div>
       {running && <BarcodeLoop videoRef={videoRef} onCode={code => { setBarcode(code); stopCamera(); void lookupBarcode(code); }} />}
     </div>}
-    {mode === "photo" && <div className="scanner-content"><p>Take a clear photo of the product label or choose an image. Digi Biashara extracts visible label text into an editable draft. Full AI object recognition can be enabled when an AI provider key is configured.</p><label className="scanner-upload"> <span>📷 Capture product photo or choose image</span><input type="file" accept="image/*" capture="environment" disabled={busy} onChange={e => { const f = e.target.files?.[0]; if (f) void scanPhoto(f); e.currentTarget.value = ""; }} /></label></div>}
+    {mode === "photo" && <div className="scanner-content"><p>Take a clear photo of the whole product or its label. AI identifies the product and extracts visible details into an editable draft. Business prices and stock are never guessed.</p><label className="scanner-upload"> <span>📷 Capture product photo or choose image</span><input type="file" accept="image/*" capture="environment" disabled={busy} onChange={e => { const f = e.target.files?.[0]; if (f) void scanPhoto(f); e.currentTarget.value = ""; }} /></label></div>}
     {mode === "paper" && <div className="scanner-content"><p>Photograph or upload a clear page. Printed lists and clear handwriting work best. Use one page per image and keep the page flat and well lit.</p><label className="scanner-upload"><span>📄 Capture book page or upload paper list</span><input type="file" accept="image/*" capture="environment" disabled={busy} onChange={e => { const f = e.target.files?.[0]; if (f) void scanPaper(f); e.currentTarget.value = ""; }} /></label><p className="muted compact-help">You can scan more pages before activating the products. OCR results are suggestions; always review handwritten entries.</p></div>}
     {busy && <div className="scanner-status">{notice || "Processing…"}</div>}
     {notice && !busy && <div className="success">{notice}</div>}
