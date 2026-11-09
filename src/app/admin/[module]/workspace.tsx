@@ -59,7 +59,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
       address:"",phone:"",opening_time:"",closing_time:"",email:"",notes:"",
       contact_person:"",job_title:"",employment_type:"permanent",monthly_salary:"0",
       category_expense:"General",description:"",amount:"",payment_method:"cash",
-      branch_id:"",customer_id:"",supplier_id:"",product_id:"",quantity:"1",unit_price:"",
+      branch_id:"",customer_id:"",supplier_id:"",product_id:"",quantity:"1",unit_price:"",mpesa_transaction_code:"",
       unit_cost:"",discount:"0",tax:"0",amount_paid:"",expense_date:new Date().toISOString().slice(0,10),
       starts_at:"",ends_at:"",service_id:"",staff_id:""
     });
@@ -178,10 +178,15 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     try{
       if(!cart.length) throw new Error("Add at least one item before saving.");
       if(!form.branch_id) throw new Error("Select a branch.");
+      if(moduleName==="sales"&&form.payment_method==="mpesa"&&!form.mpesa_transaction_code.trim()) throw new Error("Enter the M-Pesa transaction code.");
       let result:any;
       if(moduleName==="sales") result=await db.rpc("record_sale",{p_business_id:businessId,p_branch_id:form.branch_id,p_items:cart,p_customer_id:form.customer_id||null,p_payment_method:form.payment_method,p_discount:Number(form.discount||0),p_tax:Number(form.tax||0),p_amount_paid:form.amount_paid===""?null:Number(form.amount_paid),p_notes:form.notes||null});
       else result=await db.rpc("receive_purchase",{p_business_id:businessId,p_branch_id:form.branch_id,p_items:cart,p_supplier_id:form.supplier_id||null,p_supplier_invoice:form.contact_person||null,p_notes:form.notes||null});
       if(result.error) throw result.error;
+      if(moduleName==="sales"&&form.payment_method==="mpesa"&&result.data){
+        const saved=await db.from("sales").update({mpesa_transaction_code:form.mpesa_transaction_code.trim().toUpperCase()}).eq("id",result.data).eq("business_id",businessId);
+        if(saved.error) throw new Error("Sale was recorded, but the M-Pesa transaction code could not be saved: "+saved.error.message);
+      }
       reset();notify(moduleName==="sales"?"Sale completed and stock updated.":"Purchase received and stock increased.");await load();
     }catch(e){setError(e instanceof Error?e.message:"Unable to save transaction.");}
     finally{setSaving(false);}
@@ -216,7 +221,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     const received=form.amount_paid===""?total:Math.max(0,Number(form.amount_paid||0));
     const balance=Math.max(0,total-received);
     const change=Math.max(0,received-total);
-    const methods=[{value:"cash",label:"Cash",icon:"💵"},{value:"mpesa",label:"M-Pesa",icon:"📱"},{value:"card",label:"Card",icon:"💳"},{value:"bank",label:"Bank",icon:"🏦"},{value:"credit",label:"Credit",icon:"🧾"},{value:"other",label:"Other",icon:"＋"}];
+    const methods=[{value:"cash",label:"Cash",icon:"💵"},{value:"mpesa",label:"M-Pesa",icon:"📱"}];
     if(!sale) return <form className="panel workspace-form" onSubmit={transact}>
       <div className="panelhead"><h2>Receive supplier purchase</h2><span className="pill">Stock intake</span></div>
       <div className="form-grid">
@@ -262,7 +267,8 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
         </section>
         <aside className="pos-payment">
           <div className="pos-section-title"><div><h3>Payment</h3><p className="muted">Choose how the customer pays.</p></div></div>
-          <div className="pos-method-grid">{methods.map(m=><button type="button" key={m.value} className={"pos-method "+(form.payment_method===m.value?"selected":"")} onClick={()=>set("payment_method",m.value)}><span>{m.icon}</span><b>{m.label}</b></button>)}</div>
+          <div className="pos-method-grid">{methods.map(m=><button type="button" key={m.value} className={"pos-method "+(form.payment_method===m.value?"selected":"")} onClick={()=>{set("payment_method",m.value);if(m.value==="cash")set("mpesa_transaction_code","");}}><span>{m.icon}</span><b>{m.label}</b></button>)}</div>
+          {form.payment_method==="mpesa"&&<label className="field pos-mpesa-code"><span>M-Pesa transaction code</span><input type="text" required value={form.mpesa_transaction_code??""} onChange={e=>set("mpesa_transaction_code",e.target.value.toUpperCase().replace(/\s/g,""))} placeholder="e.g. QHX7ABC123" autoCapitalize="characters"/><small>Enter the confirmation code from the customer’s M-Pesa message.</small></label>}
           <div className="pos-summary">
             <div className="pos-summary-line"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
             <label className="pos-adjustment"><span>Discount (KSh)</span><input aria-label="Discount in Kenya shillings" type="number" min="0" step="0.01" value={form.discount??"0"} onChange={e=>set("discount",e.target.value)}/></label>
