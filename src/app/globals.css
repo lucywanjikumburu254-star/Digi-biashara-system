@@ -35,3 +35,59 @@
 .menu-trigger{position:fixed;left:20px;top:16px;z-index:1000}
 .dashhead{padding-left:118px}
 @media(max-width:520px){.menu-trigger{left:10px;top:12px}.dashhead{padding-left:100px}}
+
+/* Professional POS checkout */
+.pos-checkout{padding:24px}
+.pos-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:20px}
+.pos-heading h2{margin:4px 0 5px;font-size:25px}
+.pos-heading .muted,.pos-section-title .muted{margin:0;font-size:13px}
+.pos-live{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.pos-live-dot{width:8px;height:8px;border-radius:50%;background:#16a36a;display:inline-block}
+.pos-top-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:15px;background:var(--surface-soft,#f7f9fa);border:1px solid var(--line);border-radius:12px;margin-bottom:20px}
+.pos-top-fields .field{margin:0}
+.pos-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(290px,.9fr);gap:22px;align-items:start}
+.pos-items,.pos-payment{min-width:0}
+.pos-section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.pos-section-title h3{margin:0 0 4px;font-size:17px}
+.pos-count{font-size:12px;font-weight:750;padding:5px 10px;border-radius:20px;background:#edf2f5;color:#344b57}
+.pos-add-line{display:grid;grid-template-columns:minmax(130px,1fr) 82px minmax(120px,145px) auto;gap:10px;align-items:end}
+.pos-add-line .field{margin:0}
+.pos-add-button{height:42px;white-space:nowrap;padding:0 14px}
+.pos-add-button span{font-size:18px;margin-right:4px}
+.pos-cart{margin-top:18px;border:1px solid var(--line);border-radius:12px;overflow:hidden;min-height:170px}
+.pos-cart-head,.pos-cart-row{display:grid;grid-template-columns:minmax(120px,1fr) 48px minmax(88px,auto) minmax(100px,auto) 26px;gap:9px;align-items:center;padding:12px 13px}
+.pos-cart-head{background:#f5f7f8;color:#647581;font-size:10px;font-weight:800;letter-spacing:.07em}
+.pos-cart-row{border-top:1px solid var(--line);font-size:13px}
+.pos-item-name{min-width:0;display:flex;flex-direction:column;gap:3px}
+.pos-item-name strong{overflow:hidden;text-overflow:ellipsis}
+.pos-item-name small{font-size:11px;color:#75838b}
+.pos-cart-row>strong{text-align:right}
+.pos-remove{border:0;background:transparent;color:#9a4b4b;font-size:22px;cursor:pointer;line-height:1}
+.pos-empty{min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+.pos-empty-icon{font-size:26px;margin-bottom:8px}
+.pos-empty p{font-size:12px;margin:5px 0 0}
+.pos-notes{margin-top:15px}
+.pos-payment{border:1px solid var(--line);border-radius:14px;padding:16px;background:#fbfcfd}
+.pos-method-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px}
+.pos-method{min-height:67px;border:1px solid var(--line);background:#fff;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--ink);cursor:pointer}
+.pos-method span{font-size:19px}
+.pos-method b{font-size:11px}
+.pos-method.selected{border:2px solid #16765d;background:#eef8f4;color:#12654f;box-shadow:0 0 0 2px #16765d12}
+.pos-summary{border-top:1px solid var(--line);padding-top:13px}
+.pos-summary-line,.pos-grand-total{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;font-size:13px}
+.pos-adjustment{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;font-size:12px;color:#5c6b73}
+.pos-adjustment input{width:112px;max-width:45%;height:34px;border:1px solid var(--line);border-radius:7px;padding:5px 8px;text-align:right;background:#fff;color:var(--ink)}
+.pos-grand-total{margin-top:7px;padding:13px 0;border-top:1px dashed #cbd5d9;border-bottom:1px solid var(--line);font-weight:800}
+.pos-grand-total strong{font-size:21px;color:#123d35}
+.pos-received{display:flex;flex-direction:column;gap:7px;padding:14px 0 10px;font-size:12px;font-weight:750}
+.pos-received input{height:45px;border:1px solid #9db0b8;border-radius:9px;padding:8px 11px;font-size:20px;font-weight:800;text-align:right;background:#fff;color:var(--ink);width:100%}
+.pos-received small{font-size:10px;font-weight:400;color:#72818a}
+.pos-payment-result{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 12px;border-radius:9px;font-size:12px;font-weight:750}
+.pos-payment-result strong{font-size:16px}
+.pos-payment-result.is-balance{background:#fff5e8;color:#8a5617}
+.pos-payment-result.is-change{background:#eaf7f1;color:#17694f}
+.pos-complete{width:100%;margin-top:13px;min-height:47px;font-size:14px}
+.pos-secure-note{font-size:10px;color:#77858b;line-height:1.45;text-align:center;margin:9px 4px 0}
+.checkout-total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+@media(max-width:900px){.pos-layout{grid-template-columns:1fr}.pos-payment{max-width:none}}
+@media(max-width:600px){.pos-checkout{padding:15px}.pos-heading{flex-direction:column}.pos-top-fields{grid-template-columns:1fr}.pos-add-line{grid-template-columns:1fr 78px}.pos-product-field{grid-column:1/-1}.pos-add-button{height:40px}.pos-cart-head,.pos-cart-row{grid-template-columns:minmax(90px,1fr) 34px 72px 82px 20px;gap:5px;padding:10px 8px}.pos-cart-head{font-size:9px}.pos-cart-row{font-size:11px}.pos-cart-row .pos-item-name small{font-size:9px}}
