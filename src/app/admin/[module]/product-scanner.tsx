@@ -21,7 +21,7 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
   const [drafts, setDrafts] = useState<Draft[]>([]);\n  const [branches, setBranches] = useState<Branch[]>([]);\n  const [selectedBranch, setSelectedBranch] = useState("");
 
 
-  useEffect(() => {\n    void db.from("branches").select("id,name").eq("business_id", businessId).eq("status", "active").order("name").then(({data}) => setBranches((data || []) as Branch[]));\n    void db.from("products").select("id,name,sku,barcode,category,unit,cost_price,selling_price").eq("business_id", businessId).eq("is_active", false).order("created_at", { ascending: false }).then(({data}) => { if (data?.length) setDrafts(data.map((p: any) => ({ id: p.id, name: p.name || "", sku: p.sku || "", barcode: p.barcode || "", category: p.category || "", unit: p.unit || "piece", cost_price: String(p.cost_price ?? ""), selling_price: String(p.selling_price ?? ""), quantity: "0", status: "Saved draft" }))); });\n  }, [businessId]);\n  useEffect(() => () => stopCamera(), []);
+  useEffect(() => {\n    void db.from("branches").select("id,name").eq("business_id", businessId).eq("status", "active").order("name").then(({data}) => setBranches((data || []) as Branch[]));\n    void db.from("products").select("id,name,sku,barcode,category,unit,cost_price,selling_price").eq("business_id", businessId).eq("is_draft", true).order("created_at", { ascending: false }).then(({data}) => { if (data?.length) setDrafts(data.map((p: any) => ({ id: p.id, name: p.name || "", sku: p.sku || "", barcode: p.barcode || "", category: p.category || "", unit: p.unit || "piece", cost_price: String(p.cost_price ?? ""), selling_price: String(p.selling_price ?? ""), quantity: "0", status: "Saved draft" }))); });\n  }, [businessId]);\n  useEffect(() => () => stopCamera(), []);
 
   function stopCamera() {
     streamRef.current?.getTracks().forEach(track => track.stop());
@@ -86,7 +86,7 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
       barcode: draft.barcode.trim() || null, category: draft.category.trim() || null,
       unit: draft.unit.trim() || "piece", item_type: "product", description: "Added using Smart Product Scanner",
       cost_price: Number(draft.cost_price || 0), selling_price: Number(draft.selling_price || 0),
-      reorder_level: 0, track_stock: true, is_active: false, created_by: auth.user?.id ?? null
+      reorder_level: 0, track_stock: true, is_active: false, is_draft: true, created_by: auth.user?.id ?? null
     };
     const result = await db.from("products").insert(payload).select("id").single();
     if (result.error) throw result.error;
@@ -103,7 +103,7 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
       const result = await db.from("products").update({
         name: draft.name.trim(), sku: draft.sku.trim() || null, barcode: draft.barcode.trim() || null,
         category: draft.category.trim() || null, unit: draft.unit.trim() || "piece",
-        cost_price: Number(draft.cost_price || 0), selling_price: Number(draft.selling_price || 0), is_active: true
+        cost_price: Number(draft.cost_price || 0), selling_price: Number(draft.selling_price || 0), is_active: true, is_draft: false
       }).eq("id", id).eq("business_id", businessId);
       if (result.error) throw result.error;
       setDrafts(prev => prev.filter(x => x.id !== draft.id));
