@@ -2,6 +2,7 @@
 import Link from "next/link";
 import {redirect} from "next/navigation";
 import {createClient} from "@/lib/supabase/server";
+import BusinessNav from "@/components/business-nav";
 
 const modules = [
   ["branches","Branches","Manage up to five business locations."],
@@ -35,11 +36,7 @@ export default async function OwnerDashboard(){
  ]);
  const salesTotal=(sales.data??[]).reduce((sum:any,row:any)=>sum+Number(row.total??0),0);
  return <div className="layout">
-  <aside className="side"><div className="logo">DIGI<em>BIASHARA</em></div><div className="sidetitle">Business workspace</div>
-   <a className="navlink active" href="/admin/dashboard">Overview</a>
-   {modules.map(([key,label])=><a className="navlink" href={"/admin/"+key} key={key}>{label}</a>)}
-   <div className="sidetitle">Account</div><a className="navlink" href="/admin/billing">Billing & subscription</a><a className="navlink" href="/logout">Sign out</a>
-  </aside>
+  <BusinessNav active="overview"/>
   <main className="main"><header className="dashhead"><strong>{biz?.name??"Your business"}</strong><span className="muted">{user.email}</span></header>
    <section className="dashcontent"><div className="eyebrow">Business owner dashboard</div><h1>Welcome to {biz?.name??"your workspace"}</h1><p className="sub">Manage your branches, products, services, sales, stock, staff and business finances.</p>
     <div className="stats">
