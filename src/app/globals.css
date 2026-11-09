@@ -91,3 +91,6 @@
 .checkout-total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
 @media(max-width:900px){.pos-layout{grid-template-columns:1fr}.pos-payment{max-width:none}}
 @media(max-width:600px){.pos-checkout{padding:15px}.pos-heading{flex-direction:column}.pos-top-fields{grid-template-columns:1fr}.pos-add-line{grid-template-columns:1fr 78px}.pos-product-field{grid-column:1/-1}.pos-add-button{height:40px}.pos-cart-head,.pos-cart-row{grid-template-columns:minmax(90px,1fr) 34px 72px 82px 20px;gap:5px;padding:10px 8px}.pos-cart-head{font-size:9px}.pos-cart-row{font-size:11px}.pos-cart-row .pos-item-name small{font-size:9px}}
+
+/* Cash and M-Pesa are the supported POS tender options. */
+.pos-method-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pos-mpesa-code{margin:0 0 14px}.pos-mpesa-code small{font-size:11px;color:var(--muted)}
