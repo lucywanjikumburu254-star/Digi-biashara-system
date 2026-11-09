@@ -17,3 +17,15 @@
 .sale-link{color:var(--green);font-weight:800;text-decoration:underline;text-underline-offset:3px}.receipt-page{max-width:900px;margin:30px auto;padding:0 20px}.receipt-toolbar{display:flex;justify-content:space-between;gap:10px;margin-bottom:16px}.receipt{background:#fff;border:1px solid var(--line);border-radius:14px;padding:34px;max-width:760px;margin:auto;box-shadow:0 8px 28px #142d330b}.receipt-heading{text-align:center;border-bottom:1px dashed #cbd6d9;padding-bottom:22px}.receipt-heading h1{font-size:24px;margin:12px 0 6px}.receipt-heading p{margin:4px 0;color:var(--muted);font-size:13px}.receipt-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:20px 0}.receipt-meta small,.receipt-meta span{display:block;color:var(--muted);font-size:11px}.receipt-meta strong{display:block;font-size:13px;margin-top:5px}.receipt-table{width:100%;border-collapse:collapse;font-size:13px}.receipt-table th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--muted);padding:12px 8px;border-bottom:1px solid var(--line)}.receipt-table td{padding:13px 8px;border-bottom:1px solid var(--line)}.receipt-totals{max-width:340px;margin:18px 0 0 auto}.receipt-totals div{display:flex;justify-content:space-between;gap:14px;padding:7px 0;font-size:13px}.receipt-totals .grand{border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:17px;margin:5px 0}.receipt-notes{font-size:12px;color:var(--muted)}.receipt-footer{text-align:center;border-top:1px dashed #cbd6d9;margin-top:25px;padding-top:18px;font-size:13px;color:var(--muted)}
 @media print{body{background:#fff}.no-print,.side,.dashhead{display:none!important}.receipt-page{margin:0;padding:0;max-width:none}.receipt{border:0;box-shadow:none;max-width:none;padding:10mm}.receipt-toolbar{display:none!important}}
 @media(max-width:600px){.receipt{padding:18px}.receipt-meta{grid-template-columns:1fr 1fr}.receipt-table{font-size:11px}.receipt-table th,.receipt-table td{padding:8px 5px}}
+
+/* Collapsible business navigation drawer */
+.menu-trigger{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:9px 13px;font-weight:750;font-size:13px;cursor:pointer}
+.menu-trigger-icon{font-size:19px;line-height:1}
+.nav-drawer{position:fixed!important;z-index:1002;left:0;top:0;height:100dvh!important;width:min(300px,84vw);overflow-y:auto;transform:translateX(-105%);transition:transform .22s ease;box-shadow:12px 0 35px #061a2033;padding:22px 16px!important;display:block!important}
+.nav-drawer-open{transform:translateX(0)}
+.nav-backdrop{position:fixed;inset:0;z-index:1001;border:0;background:#071a20a6;cursor:pointer}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:0 8px 22px}
+.drawer-head .logo{color:#fff}
+.drawer-close{border:0;background:#24464e;color:#fff;border-radius:8px;width:34px;height:34px;font-size:24px;line-height:1}
+.dashhead{gap:14px}
+@media(max-width:520px){.dashhead{padding:0 10px}.menu-trigger{padding:8px 10px;gap:6px}.drawer-head .logo{font-size:19px}}
