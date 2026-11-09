@@ -1,6 +1,7 @@
 "use client";
 import {useMemo,useState} from "react";
 import {createClient} from "@/lib/supabase/client";
+import SubscriptionActions from "./subscription-actions";
 
 type Sub=Record<string,any>;
 const fmt=(v?:string)=>v?new Date(v).toLocaleString("en-KE",{dateStyle:"medium",timeStyle:"short",timeZone:"Africa/Nairobi"}):"—";
@@ -40,7 +41,7 @@ export default function SubscriptionManagement({initial}:{initial:Sub[]}){
     <td><div>{fmt(row.trial_ends_at)}</div><div className="trial-edit"><input aria-label="Trial end date" type="datetime-local" value={trialEnd[row.business_id]??localInput(row.trial_ends_at)} onChange={e=>setTrialEnd(v=>({...v,[row.business_id]:e.target.value}))}/><button className="btn secondary small" disabled={busy} onClick={()=>void saveTrial(row)}>Save trial</button></div></td>
     <td><span className={"pill "+(row.status==="suspended"?"off":row.status==="payment_due"||row.status==="grace_period"?"warn":"")}>{row.status}</span></td>
     <td>{fmt(row.scheduled_suspend_at)}{row.reminder_sent_at&&<small>Reminder sent</small>}</td>
-    <td><div className="row-actions"><button className="btn secondary small" disabled={busy} onClick={()=>void action(row,row.status==="suspended"?"reactivate":"suspend")}>{row.status==="suspended"?"Reactivate":"Suspend now"}</button>{row.scheduled_suspend_at&&<button className="btn secondary small" disabled={busy} onClick={()=>void action(row,"clear")}>Clear schedule</button>}</div></td>
+    <td><div className="row-actions"><button className="btn secondary small" disabled={busy} onClick={()=>void action(row,row.status==="suspended"?"reactivate":"suspend")}>{row.status==="suspended"?"Reactivate":"Suspend now"}</button>{row.scheduled_suspend_at&&<button className="btn secondary small" disabled={busy} onClick={()=>void action(row,"clear")}>Clear schedule</button>}<SubscriptionActions businessId={row.business_id} status={row.status} hideStatus/></div></td>
    </tr>)}</tbody></table>{!rows.length&&<div className="empty">No subscription records found.</div>}</div>
   </div>
  </div>;
