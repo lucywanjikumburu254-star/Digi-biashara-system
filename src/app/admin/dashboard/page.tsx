@@ -1,8 +1,58 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {redirect} from "next/navigation";import {createClient} from "@/lib/supabase/server";
+import Link from "next/link";
+import {redirect} from "next/navigation";
+import {createClient} from "@/lib/supabase/server";
+
+const modules = [
+  ["branches","Branches","Manage up to five business locations."],
+  ["catalog","Products & services","Add stock items and service prices."],
+  ["sales","Sales / POS","Create sales and record payments."],
+  ["inventory","Inventory","Track quantity at each branch."],
+  ["purchases","Purchases","Receive goods from suppliers."],
+  ["expenses","Expenses","Record operating costs."],
+  ["customers","Customers","Keep customer information."],
+  ["suppliers","Suppliers","Manage supplier contacts."],
+  ["staff","Staff","Maintain team records and assignments."],
+  ["appointments","Appointments","Book salon and service customers."],
+  ["reports","Reports","Review sales and business costs."]
+] as const;
+
 export default async function OwnerDashboard(){
- const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect("/login");
- const {data:m}=await s.from("business_memberships").select("business_id,businesses(name,status,category:business_categories(name),subscription:business_subscriptions(status,monthly_fee,due_at,trial_ends_at))").eq("user_id",user.id).eq("role","owner").eq("status","active").limit(1).maybeSingle();if(!m)redirect("/login");
- const biz:any=m.businesses;const sub=Array.isArray(biz?.subscription)?biz.subscription[0]:biz?.subscription;const isSuspended=biz?.status==="suspended"||sub?.status==="suspended"||sub?.status==="cancelled";
- return <div className="layout"><aside className="side"><div className="logo">DIGI<em>BIASHARA</em></div><div className="sidetitle">Business workspace</div><a className="navlink active" href="/admin/dashboard">Overview</a><a className="navlink" href="/admin/billing">Billing & subscription</a><div className="sidetitle">Operations</div><span className="navlink">Branches · next phase</span><span className="navlink">Products & services · next phase</span><span className="navlink">Sales · next phase</span><span className="navlink">Inventory · next phase</span><span className="navlink">Staff · next phase</span><div className="sidetitle">Account</div><a className="navlink" href="/logout">Sign out</a></aside><main className="main"><header className="dashhead"><strong>{biz?.name??"Your business"}</strong><span className="muted">{user.email}</span></header><section className="dashcontent"><div className="eyebrow">Business owner</div><h1>Welcome to your workspace</h1><p className="sub">Your business account and category-specific setup are ready.</p><div className="stats"><div className="stat"><span>Business</span><strong style={{fontSize:18}}>{biz?.name??"—"}</strong><small className="muted">{biz?.category?.name??"Business category"}</small></div><div className="stat"><span>Subscription</span><strong style={{fontSize:18}}>{sub?.status??"—"}</strong><small className="muted">Current plan status</small></div><div className="stat"><span>Monthly plan</span><strong>KSh {Number(sub?.monthly_fee??0).toLocaleString("en-KE")}</strong><small className="muted">Configured platform price</small></div><div className="stat"><span>Due date</span><strong style={{fontSize:18}}>{sub?.due_at?new Date(sub.due_at).toLocaleDateString("en-KE"):"—"}</strong><small className="muted">Subscription billing date</small></div></div>{isSuspended?<div className="panel"><span className="pill off">Business access suspended</span><h2 style={{marginTop:12}}>Your business workspace is paused</h2><p className="muted">Your business data is retained. Open Billing & subscription to review your account or contact platform support. Operational features are unavailable while your subscription is suspended.</p><a className="btn" href="/admin/billing">Open billing</a></div>:<div className="cards"><a className="card" href="/admin/billing"><h3>Billing & subscription →</h3><p>Review your current plan, trial expiry and due date.</p></a><article className="card"><h3>Branch setup</h3><p>Branch management is planned for the next build phase.</p></article><article className="card"><h3>Products and stock</h3><p>POS and inventory transactions are planned, not yet enabled for live use.</p></article></div>}<div className="panel"><h2>Category template</h2><p className="muted">The category template selected at registration is saved as a business-owned snapshot. Future master-template edits will not silently replace your business settings.</p></div></section></main></div>;
+ const s=await createClient();
+ const {data:{user}}=await s.auth.getUser();
+ if(!user) redirect("/login");
+ const {data:m}=await s.from("business_memberships")
+  .select("business_id,businesses(name,status,category:business_categories(name),subscription:business_subscriptions(status,monthly_fee,due_at,trial_ends_at))")
+  .eq("user_id",user.id).eq("role","owner").eq("status","active").limit(1).maybeSingle();
+ if(!m) redirect("/login");
+ const biz:any=m.businesses;
+ const sub=Array.isArray(biz?.subscription)?biz.subscription[0]:biz?.subscription;
+ const isSuspended=biz?.status==="suspended"||sub?.status==="suspended"||sub?.status==="cancelled";
+ const [branches,products,sales]=await Promise.all([
+  s.from("branches").select("id",{count:"exact",head:true}).eq("business_id",m.business_id).eq("status","active"),
+  s.from("products").select("id",{count:"exact",head:true}).eq("business_id",m.business_id).eq("is_active",true),
+  s.from("sales").select("total").eq("business_id",m.business_id).eq("status","completed")
+ ]);
+ const salesTotal=(sales.data??[]).reduce((sum:any,row:any)=>sum+Number(row.total??0),0);
+ return <div className="layout">
+  <aside className="side"><div className="logo">DIGI<em>BIASHARA</em></div><div className="sidetitle">Business workspace</div>
+   <a className="navlink active" href="/admin/dashboard">Overview</a>
+   {modules.map(([key,label])=><a className="navlink" href={"/admin/"+key} key={key}>{label}</a>)}
+   <div className="sidetitle">Account</div><a className="navlink" href="/admin/billing">Billing & subscription</a><a className="navlink" href="/logout">Sign out</a>
+  </aside>
+  <main className="main"><header className="dashhead"><strong>{biz?.name??"Your business"}</strong><span className="muted">{user.email}</span></header>
+   <section className="dashcontent"><div className="eyebrow">Business owner dashboard</div><h1>Welcome to {biz?.name??"your workspace"}</h1><p className="sub">Manage your branches, products, services, sales, stock, staff and business finances.</p>
+    <div className="stats">
+     <div className="stat"><span>Business category</span><strong style={{fontSize:18}}>{biz?.category?.name??"Business"}</strong><small className="muted">Configured at registration</small></div>
+     <div className="stat"><span>Active branches</span><strong>{branches.count??0} / 5</strong><small className="muted">Branch locations</small></div>
+     <div className="stat"><span>Products & services</span><strong>{products.count??0}</strong><small className="muted">Active catalogue items</small></div>
+     <div className="stat"><span>Recorded sales</span><strong style={{fontSize:18}}>KSh {salesTotal.toLocaleString("en-KE",{maximumFractionDigits:2})}</strong><small className="muted">Total of completed sales</small></div>
+    </div>
+    {isSuspended?<div className="panel"><span className="pill off">Business access suspended</span><h2 style={{marginTop:12}}>Your workspace is paused</h2><p className="muted">Your business data is retained. Open Billing & subscription to review your account.</p><Link className="btn" href="/admin/billing">Open billing</Link></div>:<>
+      <div className="panel"><div className="panelhead"><h2>Business operations</h2><span className="pill">Workspace active</span></div><p className="muted">Choose a module to open its working form and saved records.</p><div className="cards module-cards">{modules.map(([key,label,desc])=><Link className="card" href={"/admin/"+key} key={key}><h3>{label} →</h3><p>{desc}</p></Link>)}</div></div>
+      <div className="panel"><h2>Subscription</h2><p className="muted">Status: {sub?.status??"—"} · Monthly fee: KSh {Number(sub?.monthly_fee??0).toLocaleString("en-KE")} · Trial ends: {sub?.trial_ends_at?new Date(sub.trial_ends_at).toLocaleDateString("en-KE"):"—"}</p><Link className="btn secondary small" href="/admin/billing">View billing</Link></div>
+    </>}
+   </section>
+  </main>
+ </div>;
 }
