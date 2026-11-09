@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {redirect} from "next/navigation";import {createClient} from "@/lib/supabase/server";import AgentBusinessForm from "./register-form";
 export default async function AgentBusinessesPage(){const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect("/login");const {data:role}=await s.from("platform_roles").select("role,full_name,agent_code").eq("user_id",user.id).eq("status","active").maybeSingle();if(role?.role!=="agent")redirect("/login");
  const [{data:businesses},{data:subs},{data:groups},{data:categories}]=await Promise.all([
