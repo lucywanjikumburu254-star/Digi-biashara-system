@@ -29,3 +29,9 @@
 .drawer-close{border:0;background:#24464e;color:#fff;border-radius:8px;width:34px;height:34px;font-size:24px;line-height:1}
 .dashhead{gap:14px}
 @media(max-width:520px){.dashhead{padding:0 10px}.menu-trigger{padding:8px 10px;gap:6px}.drawer-head .logo{font-size:19px}}
+
+/* The menu is a floating control; keep workspace content full width. */
+.layout{display:block;min-height:100vh}
+.menu-trigger{position:fixed;left:20px;top:16px;z-index:1000}
+.dashhead{padding-left:118px}
+@media(max-width:520px){.menu-trigger{left:10px;top:12px}.dashhead{padding-left:100px}}
