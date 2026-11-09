@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {redirect} from "next/navigation";import {createClient} from "@/lib/supabase/server";
 export default async function CategoriesPage(){const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect("/login");const {data:r}=await s.from("platform_roles").select("role").eq("user_id",user.id).eq("status","active").maybeSingle();if(r?.role!=="super_admin")redirect("/login");
  const [{data:groups},{count:total},{data:cats}]=await Promise.all([s.from("category_groups").select("id,code,name,sort_order").eq("status","active").order("sort_order"),s.from("business_categories").select("id",{count:"exact",head:true}).eq("status","active"),s.from("business_categories").select("id,code,name,group_id,category_templates(version,status,module_flags)").eq("status","active").order("code").limit(200)]);
