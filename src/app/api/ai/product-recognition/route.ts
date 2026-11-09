@@ -40,8 +40,10 @@ export async function POST(request: NextRequest) {
     const estimatedBytes = Math.floor(match[2].length * 3 / 4);
     if (estimatedBytes > MAX_IMAGE_BYTES) return NextResponse.json({ error: "Image is too large. Please use an image under 5 MB." }, { status: 413 });
 
-    const apiKey = process.env.AI_GATEWAY_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: "AI Gateway key is not available to this deployment. Check the Vercel Secret and redeploy." }, { status: 503 });
+    // Prefer Vercel OIDC in hosted deployments. An invalid AI_GATEWAY_API_KEY
+    // takes precedence over OIDC at the Gateway, so do not let a stale key break production.
+    const apiKey = process.env.VERCEL_OIDC_TOKEN || process.env.AI_GATEWAY_API_KEY;
+    if (!apiKey) return NextResponse.json({ error: "No Vercel OIDC token or AI Gateway API key is available to this deployment. Redeploy from Vercel after checking AI Gateway is enabled for this project." }, { status: 503 });
 
     const instruction = mode === "paper"
       ? `Read this product stock-list page. Return every clearly identifiable product row. Extract quantity, buying price and selling price only when explicitly visible. Do not treat page numbers, row numbers or totals as product data. If uncertain, leave the field empty. Return ONLY JSON: {"products":[{"name":"string","brand":"string","category":"string","unit":"string","barcode":"string","sku":"string","description":"string","quantity":"string","cost_price":"string","selling_price":"string"}]}. Do not invent names, numbers, prices, barcodes or SKUs.`
