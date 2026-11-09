@@ -129,7 +129,8 @@ $$;
 create or replace function private.business_is_operational(p_business_id uuid) returns boolean language sql stable security definer set search_path='' as $$
  select exists(select 1 from public.businesses b join public.business_subscriptions s on s.business_id=b.id where b.id=p_business_id and b.status='active' and s.status in ('active','trial','payment_due','grace_period'));
 $$;
-revoke all on function private.is_platform_admin(),private.is_platform_agent(),private.is_business_owner(uuid),private.is_business_member(uuid),private.is_branch_assigned(uuid),private.business_is_operational(uuid) from public,anon;\ngrant execute on function private.is_platform_admin(),private.is_platform_agent(),private.is_business_owner(uuid),private.is_business_member(uuid),private.is_branch_assigned(uuid),private.business_is_operational(uuid) to authenticated;
+revoke all on function private.is_platform_admin(),private.is_platform_agent(),private.is_business_owner(uuid),private.is_business_member(uuid),private.is_branch_assigned(uuid),private.business_is_operational(uuid) from public,anon;
+grant execute on function private.is_platform_admin(),private.is_platform_agent(),private.is_business_owner(uuid),private.is_business_member(uuid),private.is_branch_assigned(uuid),private.business_is_operational(uuid) to authenticated;
 
 alter table public.category_groups enable row level security;
 alter table public.business_categories enable row level security;
@@ -216,7 +217,8 @@ create policy audit_logs_business_read on public.audit_logs for select to authen
 drop policy if exists audit_logs_admin_read on public.audit_logs;
 create policy audit_logs_admin_read on public.audit_logs for select to authenticated using(private.is_platform_admin());
 
-grant select on public.category_groups,public.business_categories,public.category_templates to anon,authenticated;\ngrant insert,update,delete on public.category_groups,public.business_categories,public.category_templates to authenticated;
+grant select on public.category_groups,public.business_categories,public.category_templates to anon,authenticated;
+grant insert,update,delete on public.category_groups,public.business_categories,public.category_templates to authenticated;
 grant select,insert,update,delete on public.platform_roles,public.businesses,public.branches,public.business_memberships,public.business_template_snapshots,public.business_subscriptions,public.subscription_invoices,public.subscription_payments,public.audit_logs to authenticated;
 revoke update on public.businesses from authenticated;
 grant update(name,location,phone,currency_code) on public.businesses to authenticated;
@@ -227,6 +229,8 @@ returns uuid language plpgsql security definer set search_path=public,pg_temp as
 declare v_uid uuid:=auth.uid();v_business uuid;v_branch uuid;v_tpl jsonb;
 begin
  if v_uid is null then raise exception 'Sign in required.';end if;
+ if exists(select 1 from public.platform_roles where user_id=v_uid) then raise exception 'Platform accounts cannot self-register as business owners.';end if;
+ if exists(select 1 from public.business_memberships where user_id=v_uid and role='owner' and status='active') then raise exception 'This account already owns a business.';end if;
  if length(trim(coalesce(p_business_name,'')))<2 then raise exception 'Business name is required.';end if;
  select jsonb_build_object('category_id',bc.id,'category_name',bc.name,'group_id',cg.id,'group_name',cg.name,'version',ct.version,'modules',ct.module_flags,'fields',ct.category_fields,'sample_catalogue',ct.sample_catalogue,'reporting_hints',ct.reporting_hints)
  into v_tpl from public.business_categories bc join public.category_groups cg on cg.id=bc.group_id
@@ -294,7 +298,11 @@ declare v_uid uuid;v_code text;
 begin
  if not private.is_platform_admin() then raise exception 'Platform administrator access required.';end if;
  select id into v_uid from auth.users where lower(email)=lower(trim(p_email)) limit 1;
- if v_uid is null then raise exception 'No user account exists for this email. Ask agent to sign up first.';end if;\n if exists(select 1 from public.platform_roles where user_id=v_uid and role='super_admin') then raise exception 'A platform administrator cannot be converted into an agent.';end if;\n if exists(select 1 from public.business_memberships where user_id=v_uid and role='owner' and status='active') then raise exception 'This user already owns a business and cannot use the agent-only login role.';end if;
+ if v_uid is null then raise exception 'No user account exists for this email. Ask agent to sign up first.';end if;
+ if exists(select 1 from public.platform_roles where user_id=v_uid and role='super_admin') then raise exception 'A platform administrator cannot be converted into an agent.';end if;
+ if exists(select 1 from public.business_memberships where user_id=v_uid and role='owner' and status='active') then raise exception 'This user already owns a business and cannot use the agent-only login role.';end if;
+ if exists(select 1 from public.platform_roles where user_id=v_uid and role='super_admin') then raise exception 'A platform administrator cannot be converted into an agent.';end if;
+ if exists(select 1 from public.business_memberships where user_id=v_uid and role='owner' and status='active') then raise exception 'This user already owns a business and cannot use the agent-only login role.';end if;
  v_code:=coalesce(nullif(trim(p_agent_code),''),'AG'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,8)));
  insert into public.platform_roles(user_id,role,full_name,phone,email,agent_code,territory,status)
  values(v_uid,'agent',trim(p_full_name),nullif(trim(coalesce(p_phone,'')),''),lower(trim(p_email)),v_code,nullif(trim(coalesce(p_territory,'')),''),'active')
@@ -331,7 +339,9 @@ declare v_owner uuid;v_business uuid;v_branch uuid;v_tpl jsonb;
 begin
  if not private.is_platform_admin() then raise exception 'Platform administrator access required.';end if;
  select id into v_owner from auth.users where lower(email)=lower(trim(p_owner_email)) limit 1;
- if v_owner is null then raise exception 'Owner account must be created through sign up first.';end if;\n if exists(select 1 from public.platform_roles where user_id=v_owner) then raise exception 'Platform accounts cannot also be business owner accounts.';end if;
+ if v_owner is null then raise exception 'Owner account must be created through sign up first.';end if;
+ if exists(select 1 from public.platform_roles where user_id=v_owner) then raise exception 'Platform accounts cannot also be business owner accounts.';end if;
+ if exists(select 1 from public.platform_roles where user_id=v_owner) then raise exception 'Platform accounts cannot also be business owner accounts.';end if;
  if exists(select 1 from public.business_memberships bm where bm.user_id=v_owner and bm.role='owner' and bm.status='active') then raise exception 'This account already owns a business.';end if;
  if p_monthly_fee<0 then raise exception 'Monthly fee cannot be negative.';end if;
  select jsonb_build_object('category_id',bc.id,'category_name',bc.name,'group_id',cg.id,'group_name',cg.name,'version',ct.version,'modules',ct.module_flags,'fields',ct.category_fields,'sample_catalogue',ct.sample_catalogue,'reporting_hints',ct.reporting_hints)
@@ -361,7 +371,9 @@ declare v_owner uuid;v_business uuid;v_branch uuid;v_tpl jsonb;
 begin
  if not private.is_platform_agent() then raise exception 'Active agent account required.';end if;
  select id into v_owner from auth.users where lower(email)=lower(trim(p_owner_email)) limit 1;
- if v_owner is null then raise exception 'Owner account must be created first.';end if;\n if exists(select 1 from public.platform_roles where user_id=v_owner) then raise exception 'Platform accounts cannot also be business owner accounts.';end if;
+ if v_owner is null then raise exception 'Owner account must be created first.';end if;
+ if exists(select 1 from public.platform_roles where user_id=v_owner) then raise exception 'Platform accounts cannot also be business owner accounts.';end if;
+ if exists(select 1 from public.platform_roles where user_id=v_owner) then raise exception 'Platform accounts cannot also be business owner accounts.';end if;
  if exists(select 1 from public.business_memberships bm where bm.user_id=v_owner and bm.role='owner' and bm.status='active') then raise exception 'This account already owns a business.';end if;
  if p_monthly_fee<0 then raise exception 'Monthly fee cannot be negative.';end if;
  select jsonb_build_object('category_id',bc.id,'category_name',bc.name,'group_id',cg.id,'group_name',cg.name,'version',ct.version,'modules',ct.module_flags,'fields',ct.category_fields,'sample_catalogue',ct.sample_catalogue,'reporting_hints',ct.reporting_hints)
