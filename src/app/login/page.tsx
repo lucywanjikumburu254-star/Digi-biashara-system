@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 export default function Login() {
+ const router = useRouter();
  const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
  async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError("");try{const s=createClient();const {data,error}=await s.auth.signInWithPassword({email,password});if(error)throw error;const uid=data.user.id;
  const [p,m]=await Promise.all([s.from("platform_roles").select("role").eq("user_id",uid).eq("status","active").maybeSingle(),s.from("business_memberships").select("role").eq("user_id",uid).eq("status","active").order("created_at").limit(1).maybeSingle()]);
