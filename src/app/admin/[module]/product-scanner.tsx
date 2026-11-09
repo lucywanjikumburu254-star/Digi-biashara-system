@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Draft = { id: string; name: string; sku: string; barcode: string; category: string; unit: string; cost_price: string; selling_price: string; quantity: string; status?: string };
-type Mode = "barcode" | "photo" | "paper";\ntype Branch = { id: string; name: string };
+type Mode = "barcode" | "photo" | "paper";
+type Branch = { id: string; name: string };
 
 declare global { interface Window { Tesseract?: any } }
 
@@ -18,10 +19,16 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
   const [notice, setNotice] = useState("");
   const [problem, setProblem] = useState("");
   const [barcode, setBarcode] = useState("");
-  const [drafts, setDrafts] = useState<Draft[]>([]);\n  const [branches, setBranches] = useState<Branch[]>([]);\n  const [selectedBranch, setSelectedBranch] = useState("");
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState("");
 
 
-  useEffect(() => {\n    void db.from("branches").select("id,name").eq("business_id", businessId).eq("status", "active").order("name").then(({data}) => setBranches((data || []) as Branch[]));\n    void db.from("products").select("id,name,sku,barcode,category,unit,cost_price,selling_price,scanner_opening_quantity").eq("business_id", businessId).eq("is_draft", true).order("created_at", { ascending: false }).then(({data}) => { if (data?.length) setDrafts(data.map((p: any) => ({ id: p.id, name: p.name || "", sku: p.sku || "", barcode: p.barcode || "", category: p.category || "", unit: p.unit || "piece", cost_price: String(p.cost_price ?? ""), selling_price: String(p.selling_price ?? ""), quantity: String(p.scanner_opening_quantity ?? 0), status: "Saved draft" }))); });\n  }, [businessId]);\n  useEffect(() => () => stopCamera(), []);
+  useEffect(() => {
+    void db.from("branches").select("id,name").eq("business_id", businessId).eq("status", "active").order("name").then(({data}) => setBranches((data || []) as Branch[]));
+    void db.from("products").select("id,name,sku,barcode,category,unit,cost_price,selling_price,scanner_opening_quantity").eq("business_id", businessId).eq("is_draft", true).order("created_at", { ascending: false }).then(({data}) => { if (data?.length) setDrafts(data.map((p: any) => ({ id: p.id, name: p.name || "", sku: p.sku || "", barcode: p.barcode || "", category: p.category || "", unit: p.unit || "piece", cost_price: String(p.cost_price ?? ""), selling_price: String(p.selling_price ?? ""), quantity: String(p.scanner_opening_quantity ?? 0), status: "Saved draft" }))); });
+  }, [businessId]);
+  useEffect(() => () => stopCamera(), []);
 
   function stopCamera() {
     streamRef.current?.getTracks().forEach(track => track.stop());
@@ -98,16 +105,26 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
     setBusy(true); setProblem(""); setNotice("");
     try {
       if (!draft.name.trim()) throw new Error("Enter the product name.");
+      const openingQty = Number(draft.quantity || 0);
+      if (openingQty > 0 && !selectedBranch) throw new Error("Choose the branch where this opening stock belongs before activating the product.");
       let id = draft.id;
       if (id.startsWith("new-")) id = await saveDraft(draft);
       const result = await db.from("products").update({
         name: draft.name.trim(), sku: draft.sku.trim() || null, barcode: draft.barcode.trim() || null,
         category: draft.category.trim() || null, unit: draft.unit.trim() || "piece",
-        cost_price: Number(draft.cost_price || 0), selling_price: Number(draft.selling_price || 0), scanner_opening_quantity: 0, is_active: true, is_draft: false
+        cost_price: Number(draft.cost_price || 0), selling_price: Number(draft.selling_price || 0),
+        scanner_opening_quantity: 0, is_active: true, is_draft: false
       }).eq("id", id).eq("business_id", businessId);
       if (result.error) throw result.error;
+      if (openingQty > 0) {
+        const stock = await db.rpc("adjust_stock", { p_business_id: businessId, p_branch_id: selectedBranch, p_product_id: id, p_quantity_delta: openingQty, p_reason: "Opening stock imported using Smart Product Scanner" });
+        if (stock.error) {
+          await db.from("products").update({ is_active: false, is_draft: true, scanner_opening_quantity: openingQty }).eq("id", id).eq("business_id", businessId);
+          throw stock.error;
+        }
+      }
       setDrafts(prev => prev.filter(x => x.id !== draft.id));
-      setNotice("Product activated. Remember to receive or adjust its opening stock in Inventory.");
+      setNotice("Product activated" + (openingQty > 0 ? " and opening stock added to the selected branch." : ". Add its opening stock later in Inventory if needed."));
       onComplete();
     } catch (e) { setProblem(e instanceof Error ? e.message : "Could not activate product."); }
     finally { setBusy(false); }
@@ -136,42 +153,46 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
     try {
       const Tesseract = await ensureTesseract();
       const result = await Tesseract.recognize(file, "eng", { logger: (m: any) => { if (m.status === "recognizing text") setNotice("Reading page… " + Math.round((m.progress || 0) * 100) + "%"); } });
-      const lines = String(result.data.text || "").split(/\\r?\\n/).map((x: string) => x.trim()).filter(Boolean);
+      const lines = String(result.data.text || "").split(/\r?\n/).map((x: string) => x.trim()).filter(Boolean);
       const parsed: Draft[] = [];
       for (const line of lines) {
-        if (/^(product|item|name|description|quantity|qty|stock|buying|selling|price|total|no\\.?|s\\/?no\\.?)$/i.test(line)) continue;
-        const parts = line.split(/[\\t,;|]+/).map((x: string) => x.trim()).filter(Boolean);
+        if (/^(product|item|name|description|quantity|qty|stock|buying|selling|price|total|no\.?|s\/?no\.?)$/i.test(line)) continue;
+        const parts = line.split(/[\t,;|]+/).map((x: string) => x.trim()).filter(Boolean);
         let name = parts[0] || "";
         let values = parts.slice(1);
         if (parts.length === 1) {
-          const words = line.replace(/^[-*•\\d.) ]+/, "").trim().split(/\\s+/);
+          const words = line.replace(/^[-*•\d.) ]+/, "").trim().split(/\s+/);
           const trailing: string[] = [];
-          while (words.length && trailing.length < 3 && /^\\d+(?:[.,]\\d{1,2})?$/.test(words[words.length - 1])) trailing.unshift(words.pop()!);
+          while (words.length && trailing.length < 3 && /^\d+(?:[.,]\d{1,2})?$/.test(words[words.length - 1])) trailing.unshift(words.pop()!);
           name = words.join(" ");
           values = trailing;
         }
-        name = name.replace(/^[-*•\\d.) ]+/, "").trim();
+        name = name.replace(/^[-*•\d.) ]+/, "").trim();
         if (!name || name.length < 2 || /^(page|date|shop|stock list)$/i.test(name)) continue;
         const numbers = values.map((x: string) => Number(x.replace(/[^0-9.]/g, ""))).filter((n: number) => Number.isFinite(n) && n >= 0);
         parsed.push({ id: "new-" + Date.now() + "-" + parsed.length, name, sku: "", barcode: "", category: "", unit: "piece", quantity: numbers[0] !== undefined ? String(numbers[0]) : "0", cost_price: numbers[1] !== undefined ? String(numbers[1]) : "", selling_price: numbers[2] !== undefined ? String(numbers[2]) : "" });
       }
       if (!parsed.length) throw new Error("No product rows were recognised. Try a clearer, well-lit photo with one page filling the frame, or type the product names manually.");
       setDrafts(prev => [...prev, ...parsed]);
-      setNotice(parsed.length + " possible product rows recognised. Check every name, quantity and price before saving.");
+      let savedCount = 0;
+      for (const draft of parsed) { try { await saveDraft(draft); savedCount++; } catch { /* keep failed entries editable for duplicate correction */ } }
+      setNotice(parsed.length + " product rows recognised; " + savedCount + " saved automatically as drafts. Check every name, quantity and price before activating.");
     } catch (e) { setProblem(e instanceof Error ? e.message : "Could not read this page."); }
     finally { setBusy(false); }
   }
 
   async function scanPhoto(file: File) {
-    setBusy(true); setProblem(""); setNotice("Checking the product label and barcode…");
+    setBusy(true); setProblem(""); setNotice("Checking the product label…");
     try {
       const Tesseract = await ensureTesseract();
       const result = await Tesseract.recognize(file, "eng");
-      const lines = String(result.data.text || "").split(/\\r?\\n/).map((x: string) => x.trim()).filter(x => x.length > 2);
+      const lines = String(result.data.text || "").split(/\r?\n/).map((x: string) => x.trim()).filter(x => x.length > 2);
       const name = lines.sort((a: string, b: string) => b.length - a.length)[0] || "";
       if (!name) throw new Error("The label text was not clear enough. Try a closer, brighter photo or use barcode scan.");
-      setDrafts(prev => [...prev, { id: "new-" + Date.now(), name: name.slice(0, 100), sku: "", barcode: "", category: "", unit: "piece", cost_price: "", selling_price: "", quantity: "0" }]);
-      setNotice("Label text extracted as a draft. This photo mode reads visible packaging text; full AI visual product identification needs an AI provider key to be configured.");
+      const draft: Draft = { id: "new-" + Date.now(), name: name.slice(0, 100), sku: "", barcode: "", category: "", unit: "piece", cost_price: "", selling_price: "", quantity: "0" };
+      setDrafts(prev => [...prev, draft]);
+      try { await saveDraft(draft); } catch { /* keep draft editable if a duplicate needs review */ }
+      setNotice("Label text extracted and saved as a draft where no duplicate exists. Full AI visual product identification still needs an AI provider key.");
     } catch (e) { setProblem(e instanceof Error ? e.message : "Could not read product label."); }
     finally { setBusy(false); }
   }
