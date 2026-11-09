@@ -181,9 +181,9 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
       barcode: String(p.barcode || ""),
       category: [p.brand, p.category].filter(Boolean).join(" · "),
       unit: String(p.unit || "piece"),
-      quantity: /^\\d+(?:\\.\\d+)?$/.test(String(p.quantity || "")) ? String(p.quantity) : "0",
-      cost_price: /^\\d+(?:\\.\\d+)?$/.test(String(p.cost_price || "")) ? String(p.cost_price) : "",
-      selling_price: /^\\d+(?:\\.\\d+)?$/.test(String(p.selling_price || "")) ? String(p.selling_price) : "",
+      quantity: /^\d+(?:\.\d+)?$/.test(String(p.quantity || "")) ? String(p.quantity) : "0",
+      cost_price: /^\d+(?:\.\d+)?$/.test(String(p.cost_price || "")) ? String(p.cost_price) : "",
+      selling_price: /^\d+(?:\.\d+)?$/.test(String(p.selling_price || "")) ? String(p.selling_price) : "",
       status: "OCR extracted · review details"
     }));
     setDrafts(prev => [...prev, ...parsed]);
