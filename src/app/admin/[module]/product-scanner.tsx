@@ -74,6 +74,7 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
         setDrafts(prev => [...prev, row]);
         setNotice("Barcode captured. No matching product was found in the external catalogue, so enter the product name and details below.");
       } else {
+        setDrafts(prev => [...prev, row]);
         await saveDraft(row);
         setNotice("Product details found and saved as a draft. Add your business prices and stock before activating it.");
       }
