@@ -184,7 +184,7 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
       quantity: /^\\d+(?:\\.\\d+)?$/.test(String(p.quantity || "")) ? String(p.quantity) : "0",
       cost_price: /^\\d+(?:\\.\\d+)?$/.test(String(p.cost_price || "")) ? String(p.cost_price) : "",
       selling_price: /^\\d+(?:\\.\\d+)?$/.test(String(p.selling_price || "")) ? String(p.selling_price) : "",
-      status: "AI recognised · review details"
+      status: "OCR extracted · review details"
     }));
     setDrafts(prev => [...prev, ...parsed]);
     let savedCount = 0;
@@ -197,16 +197,45 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
         setDrafts(prev => prev.map(item => item.id === draft.id ? { ...item, status: message.slice(0, 90) } : item));
       }
     }
-    setNotice(parsed.length + " product" + (parsed.length === 1 ? "" : "s") + " recognised by AI; " + savedCount + " saved as inactive drafts. Review every field before activating.");
+    setNotice(parsed.length + " product" + (parsed.length === 1 ? "" : "s") + " extracted; " + savedCount + " saved as inactive drafts. Review every field before activating.");
+  }
+
+  function parsePaperText(text: string): any[] {
+    const rows: any[] = [];
+    for (const rawLine of text.split(/\\r?\\n/)) {
+      const line = rawLine.replace(/[|]/g, " ").trim();
+      if (!line || line.length < 2) continue;
+      const columns = line.split(/\\t+|\\s{2,}/).map(value => value.trim()).filter(Boolean);
+      if (columns.length >= 2) {
+        const name = columns[0].replace(/^[-•*\\d.)\\s]+/, "").trim();
+        if (name.length >= 2) {
+          const numeric = columns.slice(1).map(value => value.replace(/[,]/g, "").match(/^\\d+(?:\\.\\d{1,2})?$/)?.[0] || "");
+          rows.push({ name, quantity: numeric[0] || "", cost_price: numeric[1] || "", selling_price: numeric[2] || "", unit: "piece" });
+        }
+        continue;
+      }
+      const name = line.replace(/^[-•*\\d.)\\s]+/, "").trim();
+      if (name.length >= 2 && !/^(product|item|name|quantity|qty|price|stock)$/i.test(name)) {
+        rows.push({ name, quantity: "", cost_price: "", selling_price: "", unit: "piece" });
+      }
+    }
+    return rows.slice(0, 60);
   }
 
   async function scanPaper(file: File) {
-    setBusy(true); setProblem(""); setNotice("AI is reading the product list…");
+    setBusy(true); setProblem(""); setNotice("Reading the page with free OCR…");
     try {
-      const rows = await recogniseWithAI(file, "paper");
-      await saveRecognisedRows(rows, "No clear product rows were found. Retake the page photo with better lighting, keep the page flat, and include the full list.");
+      const engine = await ensureTesseract();
+      const result = await engine.recognize(file, "eng", { logger: (message: any) => {
+        if (message?.status === "recognizing text" && typeof message.progress === "number") {
+          setNotice("Reading page… " + Math.round(message.progress * 100) + "%");
+        }
+      }});
+      const rows = parsePaperText(result?.data?.text || "");
+      if (!rows.length) throw new Error("No product lines were detected. Retake the page in good light, keep it flat, and try clearer writing or a printed list.");
+      await saveRecognisedRows(rows, "No product lines were detected. Try another photo.");
     } catch (e) {
-      setProblem(e instanceof Error ? e.message : "AI could not read this page.");
+      setProblem(e instanceof Error ? e.message : "Could not read this page. Please try again.");
     } finally { setBusy(false); }
   }
 
