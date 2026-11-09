@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 
 type Item = { id:string; name:string; selling_price:number; item_type:string; track_stock:boolean };
 type Customer = { id:string; name:string; phone:string|null };
-type Sale = { id:string; sale_number:string; created_at:string; total:number; amount_paid:number; balance:number; payment_method:string; customers?:{name:string}|null };
+type Sale = { id:string; sale_number:string; created_at:string; total:number; amount_paid:number; balance:number; payment_method:string; customers?:{name:string}|{name:string}[]|null };
 
 export default function EmployeeSales({businessId,branchId,branchName}:{businessId:string;branchId:string;branchName:string}) {
   const db=useMemo(()=>createClient(),[]);
@@ -99,7 +99,7 @@ export default function EmployeeSales({businessId,branchId,branchName}:{business
       </section>
       <section className="panel">
         <div className="panelhead"><h2>Recent sales at this branch</h2><button className="btn secondary small" type="button" onClick={()=>void load()} disabled={loading}>Refresh</button></div>
-        {loading?<div className="empty">Loading sales…</div>:sales.length===0?<div className="empty">No sales recorded yet for this branch.</div>:<div className="table-wrap"><table className="table"><thead><tr><th>Sale number</th><th>Date</th><th>Customer</th><th>Total</th><th>Paid</th><th>Balance</th><th>Method</th></tr></thead><tbody>{sales.map(s=><tr key={s.id}><td>{s.sale_number}</td><td>{new Date(s.created_at).toLocaleString("en-KE",{dateStyle:"medium",timeStyle:"short"})}</td><td>{s.customers?.name??"Walk-in"}</td><td>KSh {Number(s.total).toLocaleString("en-KE")}</td><td>KSh {Number(s.amount_paid).toLocaleString("en-KE")}</td><td>KSh {Number(s.balance).toLocaleString("en-KE")}</td><td>{s.payment_method}</td></tr>)}</tbody></table></div>}
+        {loading?<div className="empty">Loading sales…</div>:sales.length===0?<div className="empty">No sales recorded yet for this branch.</div>:<div className="table-wrap"><table className="table"><thead><tr><th>Sale number</th><th>Date</th><th>Customer</th><th>Total</th><th>Paid</th><th>Balance</th><th>Method</th></tr></thead><tbody>{sales.map(s=><tr key={s.id}><td>{s.sale_number}</td><td>{new Date(s.created_at).toLocaleString("en-KE",{dateStyle:"medium",timeStyle:"short"})}</td><td>{Array.isArray(s.customers)?(s.customers[0]?.name??"Walk-in"):(s.customers?.name??"Walk-in")}</td><td>KSh {Number(s.total).toLocaleString("en-KE")}</td><td>KSh {Number(s.amount_paid).toLocaleString("en-KE")}</td><td>KSh {Number(s.balance).toLocaleString("en-KE")}</td><td>{s.payment_method}</td></tr>)}</tbody></table></div>}
       </section>
     </section>
   </main>;
