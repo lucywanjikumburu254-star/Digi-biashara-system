@@ -35,9 +35,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only the business owner or administrator can use AI product recognition." }, { status: 403 });
     }
 
-    const match = image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
-    if (!match) return NextResponse.json({ error: "Please upload a JPG, PNG or WebP image." }, { status: 400 });
-    const estimatedBytes = Math.floor(match[2].length * 3 / 4);
+    const commaIndex = image.indexOf(",");
+    const imageHeader = commaIndex >= 0 ? image.slice(0, commaIndex) : "";
+    const mimeType = imageHeader.startsWith("data:") ? imageHeader.slice(5) : "";
+    const encodedImage = commaIndex >= 0 ? image.slice(commaIndex + 1) : "";
+    if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType) || !/^[A-Za-z0-9+/=]+$/.test(encodedImage)) {
+      return NextResponse.json({ error: "Please upload a JPG, PNG or WebP image." }, { status: 400 });
+    }
+    const estimatedBytes = Math.floor(encodedImage.length * 3 / 4);
     if (estimatedBytes > MAX_IMAGE_BYTES) return NextResponse.json({ error: "Image is too large. Please use an image under 3 MB." }, { status: 413 });
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -60,7 +65,7 @@ export async function POST(request: NextRequest) {
           role: "user",
           parts: [
             { text: instruction },
-            { inlineData: { mimeType: match[1], data: match[2] } }
+            { inlineData: { mimeType, data: encodedImage } }
           ]
         }],
         generationConfig: {
