@@ -9,7 +9,7 @@ type Branch = { id: string; name: string };
 
 declare global { interface Window { Tesseract?: any } }
 
-export default function ProductScanner({ businessId, onComplete }: { businessId: string; onComplete: () => void }) {
+export default function ProductScanner({ businessId, onComplete, onClose }: { businessId: string; onComplete: () => void; onClose: () => void }) {
   const db = createClient();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -198,7 +198,7 @@ export default function ProductScanner({ businessId, onComplete }: { businessId:
   }
 
   return <section className="panel product-scanner">
-    <div className="panelhead"><div><h2>Smart Product Scanner</h2><p className="muted">Capture barcodes, product labels or handwritten stock lists.</p></div><button type="button" className="btn secondary small" onClick={onComplete}>Close</button></div>
+    <div className="panelhead"><div><h2>Smart Product Scanner</h2><p className="muted">Capture barcodes, product labels or handwritten stock lists.</p></div><button type="button" className="btn secondary small" onClick={onClose}>Close</button></div>
     <div className="scanner-tabs">
       <button type="button" className={mode === "barcode" ? "selected" : ""} onClick={() => { stopCamera(); setMode("barcode"); }}>▥ Barcode</button>
       <button type="button" className={mode === "photo" ? "selected" : ""} onClick={() => { stopCamera(); setMode("photo"); }}>▧ Product photo</button>
