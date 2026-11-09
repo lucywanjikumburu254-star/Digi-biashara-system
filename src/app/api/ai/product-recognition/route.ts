@@ -4,11 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MODEL = "alibaba/qwen3-vl-instruct";
+const MODEL = "gemini-2.5-flash";
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
 function clean(value: unknown, max = 180): string {
-  return typeof value === "string" ? value.trim().replace(/[\u0000-\u001f\u007f]/g, "").slice(0, max) : "";
+  return typeof value === "string" ? value.trim().replace(/[\\u0000-\\u001f\\u007f]/g, "").slice(0, max) : "";
 }
 
 export async function POST(request: NextRequest) {
@@ -35,59 +35,65 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Only the business owner or administrator can use AI product recognition." }, { status: 403 });
     }
 
-    const match = image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+    const match = image.match(/^data:(image\\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
     if (!match) return NextResponse.json({ error: "Please upload a JPG, PNG or WebP image." }, { status: 400 });
     const estimatedBytes = Math.floor(match[2].length * 3 / 4);
-    if (estimatedBytes > MAX_IMAGE_BYTES) return NextResponse.json({ error: "Image is too large. Please use an image under 5 MB." }, { status: 413 });
+    if (estimatedBytes > MAX_IMAGE_BYTES) return NextResponse.json({ error: "Image is too large. Please use an image under 3 MB." }, { status: 413 });
 
-    // Prefer Vercel OIDC in hosted deployments. An invalid AI_GATEWAY_API_KEY
-    // takes precedence over OIDC at the Gateway, so do not let a stale key break production.
-    const apiKey = process.env.VERCEL_OIDC_TOKEN || process.env.AI_GATEWAY_API_KEY;
-    if (!apiKey) return NextResponse.json({ error: "No Vercel OIDC token or AI Gateway API key is available to this deployment. Redeploy from Vercel after checking AI Gateway is enabled for this project." }, { status: 503 });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "Gemini is not configured yet. Add GEMINI_API_KEY to the Vercel Production environment and redeploy." }, { status: 503 });
+    }
 
     const instruction = mode === "paper"
-      ? `Read this product stock-list page. Return every clearly identifiable product row. Extract quantity, buying price and selling price only when explicitly visible. Do not treat page numbers, row numbers or totals as product data. If uncertain, leave the field empty. Return ONLY JSON: {"products":[{"name":"string","brand":"string","category":"string","unit":"string","barcode":"string","sku":"string","description":"string","quantity":"string","cost_price":"string","selling_price":"string"}]}. Do not invent names, numbers, prices, barcodes or SKUs.`
-      : `Identify the single main retail product shown. Read visible packaging text and barcode if legible. Return ONLY JSON: {"products":[{"name":"string","brand":"string","category":"string","unit":"string","barcode":"string","sku":"string","description":"string","quantity":"","cost_price":"","selling_price":""}]}. Do not guess barcode, SKU, business prices or stock. If identity is unclear, return an empty products array. Do not invent facts.`;
+      ? `Read this product stock-list page. Return every clearly identifiable product row, up to 60. Extract quantity, buying price and selling price only when explicitly visible. Do not treat page numbers, row numbers or totals as product data. If uncertain, leave the field empty. Return JSON matching this schema: {"products":[{"name":"string","brand":"string","category":"string","unit":"string","barcode":"string","sku":"string","description":"string","quantity":"string","cost_price":"string","selling_price":"string"}]}. Do not invent names, numbers, prices, barcodes or SKUs.`
+      : `Identify the single main retail product shown. Read visible packaging text and barcode only if legible. Return JSON matching this schema: {"products":[{"name":"string","brand":"string","category":"string","unit":"string","barcode":"string","sku":"string","description":"string","quantity":"","cost_price":"","selling_price":""}]}. Do not guess barcode, SKU, business prices or stock. If identity is unclear, return an empty products array. Do not invent facts.`;
 
-    const gatewayResponse = await fetch("https://ai-gateway.vercel.sh/v1/chat/completions", {
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        model: MODEL,
-        temperature: 0.1,
-        max_tokens: 1800,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: "You are a careful retail inventory assistant. Extract only information visible in the supplied image. Never invent missing data." },
-          { role: "user", content: [
-            { type: "text", text: instruction },
-            { type: "image_url", image_url: { url: image } }
-          ] }
-        ]
+        systemInstruction: {
+          parts: [{ text: "You are a careful retail inventory assistant. Extract only information visible in the supplied image. Never invent missing data. Respond with valid JSON only." }]
+        },
+        contents: [{
+          role: "user",
+          parts: [
+            { text: instruction },
+            { inlineData: { mimeType: match[1], data: match[2] } }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 3000,
+          responseMimeType: "application/json"
+        }
       }),
       signal: AbortSignal.timeout(50000)
     });
 
-    if (!gatewayResponse.ok) {
-      const errorBody = await gatewayResponse.text();
-      const safeMessage = gatewayResponse.status === 401 || gatewayResponse.status === 403
-        ? "AI Gateway rejected the saved key. Check that the key is valid and belongs to the correct Vercel team."
-        : gatewayResponse.status === 402
-          ? "AI Gateway needs available credits or billing before it can recognise products."
-          : gatewayResponse.status === 429
-            ? "AI Gateway is receiving too many requests. Please wait a moment and try again."
-            : `AI Gateway request failed (HTTP ${gatewayResponse.status}). Please try again.`;
-      console.error("AI product recognition gateway error", gatewayResponse.status, errorBody.slice(0, 500));
-      return NextResponse.json({ error: safeMessage }, { status: gatewayResponse.status >= 500 ? 502 : gatewayResponse.status });
+    if (!geminiResponse.ok) {
+      const errorBody = await geminiResponse.text();
+      let providerMessage = "";
+      try { providerMessage = JSON.parse(errorBody)?.error?.message || ""; } catch {}
+      const safeMessage = geminiResponse.status === 400 || geminiResponse.status === 401
+        ? "Gemini rejected the API key or request. Check that GEMINI_API_KEY was copied correctly in Vercel."
+        : geminiResponse.status === 403
+          ? "Google Gemini access is not enabled for this API key or project. Check Google AI Studio API key settings."
+          : geminiResponse.status === 429
+            ? "The free Gemini usage limit has been reached. Please wait and try again later."
+            : `Gemini request failed (HTTP ${geminiResponse.status}). Please try again.`;
+      console.error("Gemini product recognition error", geminiResponse.status, providerMessage || errorBody.slice(0, 400));
+      return NextResponse.json({ error: safeMessage }, { status: geminiResponse.status >= 500 ? 502 : geminiResponse.status });
     }
 
-    const result = await gatewayResponse.json();
-    const text = result?.choices?.[0]?.message?.content;
-    const raw = Array.isArray(text) ? text.map((part: any) => part?.text || "").join("\n") : String(text || "");
+    const result = await geminiResponse.json();
+    const raw = (result?.candidates?.[0]?.content?.parts || []).map((part: any) => part?.text || "").join("\\n");
+    if (!raw) throw new Error("Gemini returned no readable result. Please retake the image.");
     let parsed: any;
     try { parsed = JSON.parse(raw); }
     catch {
-      const jsonText = raw.match(/\{[\s\S]*\}/)?.[0];
+      const jsonText = raw.match(/\\{[\\s\\S]*\\}/)?.[0];
       if (!jsonText) throw new Error("The AI model returned an unreadable result. Please retake the image.");
       parsed = JSON.parse(jsonText);
     }
@@ -98,7 +104,7 @@ export async function POST(request: NextRequest) {
     })).filter((p: any) => p.name.length >= 2) : [];
     return NextResponse.json({ products, model: MODEL });
   } catch (error) {
-    console.error("AI product recognition error", error);
+    console.error("Gemini product recognition error", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Product recognition failed. Please try again." }, { status: 500 });
   }
 }
