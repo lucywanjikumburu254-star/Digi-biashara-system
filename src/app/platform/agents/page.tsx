@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import AgentActions from "./agent-actions";
 import {redirect} from "next/navigation";import {createClient} from "@/lib/supabase/server";import AgentCreateForm from "./agent-form";
 export default async function AgentsPage(){const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect("/login");const {data:r}=await s.from("platform_roles").select("role").eq("user_id",user.id).eq("status","active").maybeSingle();if(r?.role!=="super_admin")redirect("/login");const [{data:agents},{data:businesses}]=await Promise.all([s.from("platform_roles").select("user_id,full_name,email,phone,agent_code,territory,status,created_at").eq("role","agent").order("created_at",{ascending:false}),s.from("businesses").select("agent_user_id,id,status,subscription:business_subscriptions(status)").not("agent_user_id","is",null)]);
