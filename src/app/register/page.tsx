@@ -1,22 +1,4 @@
-"use client";
-import Link from "next/link";
-import { useEffect,useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-type Group={id:string;name:string}; type Category={id:string;group_id:string;name:string};
-export default function Register(){
- const router=useRouter();
- const [groups,setGroups]=useState<Group[]>([]);const [categories,setCategories]=useState<Category[]>([]);const [group,setGroup]=useState("");const [category,setCategory]=useState("");const [business,setBusiness]=useState("");const [name,setName]=useState("");const [email,setEmail]=useState("");const [phone,setPhone]=useState("");const [password,setPassword]=useState("");const [error,setError]=useState("");const [busy,setBusy]=useState(false);
- useEffect(()=>{const s=createClient();s.from("category_groups").select("id,name").order("sort_order").then(({data})=>setGroups(data??[]));s.from("business_categories").select("id,group_id,name").eq("status","active").order("sort_order").then(({data})=>setCategories(data??[]));},[]);
- const filtered=categories.filter(c=>c.group_id===group);
- async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError("");try{const s=createClient();const {data:{user:existingUser}}=await s.auth.getUser();if(existingUser){if((existingUser.email??"").toLowerCase()!==email.toLowerCase())throw new Error("You are signed in with a different email. Sign out and use the account email for this business.");}else{const {data,error}=await s.auth.signUp({email,password,options:{data:{full_name:name,phone}}});if(error)throw error;if(!data.user)throw new Error("Account creation did not return a user.");if(!data.session)throw new Error("Email confirmation is enabled in Supabase. Turn off Auth → Providers → Email → Confirm email for direct password signup without a verification link.");}const {error:rpcError}=await s.rpc("register_business",{p_business_name:business,p_category_id:category,p_location:null,p_phone:phone});if(rpcError)throw rpcError;router.push("/admin/dashboard");}catch(err){setError(err instanceof Error?err.message:"Registration failed. Check the entered details.");}finally{setBusy(false);}}
- return <main><header className="top"><Link className="logo" href="/">DIGI<em>BIASHARA</em></Link><div className="toplinks"><a href="/account/create">Create account only</a><a href="/login">Sign in</a></div></header><section className="auth"><form className="authbox" onSubmit={submit}><div className="eyebrow">Get started</div><h1>Register your business</h1><p className="muted">Create your owner account and business workspace.</p>{error&&<div className="error">{error}</div>}
- <div className="field"><label>Business name</label><input required value={business} onChange={e=>setBusiness(e.target.value)} placeholder="e.g. Main Street Stores"/></div>
- <div className="field"><label>Business group</label><select required value={group} onChange={e=>{setGroup(e.target.value);setCategory("");}}><option value="">Choose a group</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></div>
- <div className="field"><label>Business category</label><select required value={category} onChange={e=>setCategory(e.target.value)} disabled={!group}><option value="">Choose a category</option>{filtered.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
- <div className="field"><label>Owner full name</label><input required value={name} onChange={e=>setName(e.target.value)} autoComplete="name"/></div>
- <div className="field"><label>Email address</label><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email"/></div>
- <div className="field"><label>Phone number</label><input type="tel" required value={phone} onChange={e=>setPhone(e.target.value)} autoComplete="tel"/></div>
- <div className="field"><label>Create password</label><input type="password" minLength={8} required value={password} onChange={e=>setPassword(e.target.value)} autoComplete="new-password"/><small className="muted">At least 8 characters. No SMS code or email OTP is requested by this form.</small></div>
- <button className="btn" style={{width:"100%",marginTop:8}} disabled={busy}>{busy?"Creating your workspace…":"Create business account"}</button><p className="muted" style={{fontSize:12,marginTop:14}}>Email and phone are account contact details. Direct signup requires Supabase email confirmation to be disabled.</p></form></section></main>;
+import { redirect } from "next/navigation";
+export default function PublicBusinessRegistration() {
+  redirect("/login");
 }
