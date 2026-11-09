@@ -202,19 +202,19 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
 
   function parsePaperText(text: string): any[] {
     const rows: any[] = [];
-    for (const rawLine of text.split(/\\r?\\n/)) {
+    for (const rawLine of text.split(/\r?\n/)) {
       const line = rawLine.replace(/[|]/g, " ").trim();
       if (!line || line.length < 2) continue;
-      const columns = line.split(/\\t+|\\s{2,}/).map(value => value.trim()).filter(Boolean);
+      const columns = line.split(/\t+|\s{2,}/).map(value => value.trim()).filter(Boolean);
       if (columns.length >= 2) {
-        const name = columns[0].replace(/^[-•*\\d.)\\s]+/, "").trim();
+        const name = columns[0].replace(/^[-•*\d.)\s]+/, "").trim();
         if (name.length >= 2) {
-          const numeric = columns.slice(1).map(value => value.replace(/[,]/g, "").match(/^\\d+(?:\\.\\d{1,2})?$/)?.[0] || "");
+          const numeric = columns.slice(1).map(value => value.replace(/[,]/g, "").match(/^\d+(?:\.\d{1,2})?$/)?.[0] || "");
           rows.push({ name, quantity: numeric[0] || "", cost_price: numeric[1] || "", selling_price: numeric[2] || "", unit: "piece" });
         }
         continue;
       }
-      const name = line.replace(/^[-•*\\d.)\\s]+/, "").trim();
+      const name = line.replace(/^[-•*\d.)\s]+/, "").trim();
       if (name.length >= 2 && !/^(product|item|name|quantity|qty|price|stock)$/i.test(name)) {
         rows.push({ name, quantity: "", cost_price: "", selling_price: "", unit: "piece" });
       }
