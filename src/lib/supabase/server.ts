@@ -9,7 +9,7 @@ export async function createClient() {
   return createServerClient(url, key, {
     cookies: {
       getAll() { return jar.getAll(); },
-      setAll(values, _headers) {
+      setAll(values) {
         try { values.forEach(({ name, value, options }) => jar.set(name, value, options)); }
         catch { /* Server Components cannot mutate cookies; src/proxy.ts refreshes sessions. */ }
       },
