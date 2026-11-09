@@ -217,7 +217,8 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
     {busy && <div className="scanner-status">{notice || "Processing…"}</div>}
     {notice && !busy && <div className="success">{notice}</div>}
     {problem && <div className="error" role="alert">{problem}</div>}
-    {drafts.length > 0 && <div className="scanner-drafts"><div className="panelhead"><div><h3>Review recognised products ({drafts.length})</h3><p className="muted">Edit details, then activate. Recognised rows are saved as inactive drafts automatically; prices are never guessed.</p></div></div>\n      <label className="field scanner-branch"><span>Branch for opening stock</span><select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)}><option value="">Choose branch when importing quantities</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+    {drafts.length > 0 && <div className="scanner-drafts"><div className="panelhead"><div><h3>Review recognised products ({drafts.length})</h3><p className="muted">Edit details, then activate. Recognised rows are saved as inactive drafts automatically; prices are never guessed.</p></div></div>
+      <label className="field scanner-branch"><span>Branch for opening stock</span><select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)}><option value="">Choose branch when importing quantities</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
       {drafts.map(d => <div className="scanner-draft" key={d.id}>
         <label className="field"><span>Product name</span><input value={d.name} onChange={e => changeDraft(d.id, "name", e.target.value)} /></label>
         <label className="field"><span>Barcode</span><input value={d.barcode} onChange={e => changeDraft(d.id, "barcode", e.target.value)} /></label>
