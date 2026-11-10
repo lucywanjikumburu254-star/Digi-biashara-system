@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import BrandLogo from "@/components/brand-logo";
 
 type LoginPortal = "business" | "platform";
 
@@ -97,7 +98,7 @@ export function LoginForm({ portal }: { portal: LoginPortal }) {
   return (
     <main>
       <header className="top">
-        <Link className="logo" href="/">DIGI<em>BIASHARA</em></Link>
+        <BrandLogo />
         <span className="muted">{isPlatformPortal ? "Platform team access" : "Business account access"}</span>
       </header>
       <section className="auth">
