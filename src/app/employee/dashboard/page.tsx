@@ -2,6 +2,7 @@ import Link from "next/link";
 import {redirect} from "next/navigation";
 import {createClient} from "@/lib/supabase/server";
 import EmployeeSales from "./employee-sales";
+import BrandLogo from "@/components/brand-logo";
 
 export default async function EmployeeDashboard(){
   const s=await createClient();
@@ -16,7 +17,7 @@ export default async function EmployeeDashboard(){
   if(error||!m||!m.branch_id||m.permissions?.sales!==true) redirect("/login");
   const business:any=m.businesses;
   if(business?.status!=="active"){
-    return <main className="wrap"><Link className="logo" href="/">DIGI<em>BIASHARA</em></Link><h1>Business access paused</h1><p className="muted">Your business owner should contact platform support about the subscription. Business data remains stored.</p><a className="btn" href="/logout">Sign out</a></main>;
+    return <main className="wrap"><BrandLogo /><h1>Business access paused</h1><p className="muted">Your business owner should contact platform support about the subscription. Business data remains stored.</p><a className="btn" href="/logout">Sign out</a></main>;
   }
 
   const {data:branch}=await s.from("branches").select("id,name").eq("id",m.branch_id).eq("business_id",m.business_id).eq("status","active").maybeSingle();
