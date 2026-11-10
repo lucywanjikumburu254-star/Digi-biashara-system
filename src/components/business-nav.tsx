@@ -33,7 +33,7 @@ export default function BusinessNav({active}:{active:string}) {
       {items.slice(0,12).map(([key,label,url])=><Link key={key} tabIndex={open?0:-1} className={"navlink "+(active===key?"active":"")} href={url} onClick={()=>setOpen(false)}>{label}</Link>)}
       <div className="sidetitle">Account</div>
       <Link tabIndex={open?0:-1} className={"navlink "+(active==="billing"?"active":"")} href="/admin/billing" onClick={()=>setOpen(false)}>Billing & subscription</Link>
-      <Link tabIndex={open?0:-1} className="navlink" href="/logout">Sign out</Link>
+      <form action="/logout" method="post"><button tabIndex={open?0:-1} type="submit" className="navlink" style={{width:"100%",textAlign:"left",border:0,background:"transparent",cursor:"pointer",font:"inherit"}}>Sign out</button></form>
     </aside>
   </>;
 }
