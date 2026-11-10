@@ -22,6 +22,7 @@ export default function Home() {
           <a href="#support">Support</a>
         </nav>
         <div className="db-header-actions">
+          <Link className="db-login db-admin-login" href="/platform/login"><span aria-hidden="true">♜</span> Admin Login</Link>
           <Link className="db-login" href="/login"><span aria-hidden="true">♙</span> Login</Link>
           <Link className="db-start" href="/register"><span aria-hidden="true">➤</span> Get Started</Link>
         </div>
