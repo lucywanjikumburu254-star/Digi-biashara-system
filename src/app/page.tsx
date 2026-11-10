@@ -13,7 +13,7 @@ export default function Home() {
     <main className="db-home">
       <header className="db-header">
         <Link href="/" className="db-brand" aria-label="Digi Biashara home">
-          <img src="/images/digi-biashara-logo.jpg" alt="Digi Biashara logo" />
+          <img src="https://res.cloudinary.com/azrvy9ub/image/upload/f_auto,q_auto,w_240/v1794349210/1793911899888.jpg" alt="Digi Biashara logo" />
         </Link>
         <nav className="db-nav" aria-label="Main navigation">
           <a className="active" href="#">Home</a>
@@ -49,7 +49,7 @@ export default function Home() {
 
         <div className="db-visual" aria-label="Shop owner using Digi Biashara">
           <div className="db-photo-frame">
-            <img className="db-shop-photo" src="/images/digi-biashara-shop.jpg" alt="Shop owner managing her business using a smartphone" />
+            <img className="db-shop-photo" src="https://res.cloudinary.com/azrvy9ub/image/upload/f_auto,q_auto,w_1100/v1794349210/1794228429642.jpg" alt="Shop owner managing her business using a smartphone" />
           </div>
           <div className="db-float-card db-growth-card">
             <strong>Business Growth</strong>
