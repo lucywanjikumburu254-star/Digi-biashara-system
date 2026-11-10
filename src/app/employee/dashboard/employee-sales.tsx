@@ -69,7 +69,7 @@ export default function EmployeeSales({businessId,branchId,branchName}:{business
   return <main className="employee-pos">
     <header className="employee-pos-head">
       <div><div className="logo">DIGI<em>BIASHARA</em></div><p className="muted">Employee · Sales only</p></div>
-      <a className="btn secondary small" href="/logout">Sign out</a>
+      <form action="/logout" method="post"><button type="submit" className="btn secondary small">Sign out</button></form>
     </header>
     <section className="employee-pos-content">
       <div className="eyebrow">Assigned branch</div>
