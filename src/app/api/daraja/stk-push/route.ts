@@ -85,7 +85,8 @@ export async function POST(request: Request) {
       const authData = await authResponse.json();
       if (!authResponse.ok || !authData.access_token) throw new Error("Safaricom Sandbox authentication failed.");
 
-      const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
+      const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+      const timestamp = ["year","month","day","hour","minute","second"].map((key) => parts.find((part) => part.type === key)?.value ?? "").join("");
       const password = Buffer.from(shortcode + passkey + timestamp).toString("base64");
       const callbackUrl = new URL("/api/daraja/callback?token=" + callbackToken, request.url).toString();
       const stkResponse = await fetch("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest", {
