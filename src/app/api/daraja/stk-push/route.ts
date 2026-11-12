@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { decryptDarajaSecret } from "@/lib/daraja-credentials";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,12 +41,44 @@ export async function POST(request: Request) {
     const membership = memberships.find((m: any) => m.role === "owner" || (m.role === "employee" && m.branch_id === body.branch_id && m.permissions?.sales === true));
     if (!membership) return NextResponse.json({ error: "You do not have permission to make POS sales for this branch." }, { status: 403 });
 
-    const consumerKey = process.env.DARAJA_SANDBOX_CONSUMER_KEY;
-    const consumerSecret = process.env.DARAJA_SANDBOX_CONSUMER_SECRET;
-    const passkey = process.env.DARAJA_SANDBOX_PASSKEY;
-    const shortcode = process.env.DARAJA_SANDBOX_SHORTCODE;
-    if (process.env.DARAJA_ENV !== "sandbox" || !consumerKey || !consumerSecret || !passkey || !shortcode) {
-      return NextResponse.json({ error: "Daraja Sandbox configuration is incomplete. Check the Preview environment variables." }, { status: 503 });
+    admin = createAdminClient();
+    const accountType = body.account_type === "till" ? "till" : "paybill";
+    const { data: businessAccount, error: accountError } = await admin.from("business_mpesa_accounts")
+      .select("account_type,account_number,shortcode,environment,enabled,consumer_key_ciphertext,consumer_secret_ciphertext,passkey_ciphertext")
+      .eq("business_id", membership.business_id).eq("account_type", accountType).maybeSingle();
+    if (accountError) throw accountError;
+
+    let consumerKey = "";
+    let consumerSecret = "";
+    let passkey = "";
+    let shortcode = "";
+    let partyB = "";
+    let transactionType = "CustomerPayBillOnline";
+    let baseUrl = "https://sandbox.safaricom.co.ke";
+
+    if (businessAccount) {
+      if (!businessAccount.enabled) return NextResponse.json({ error: "This M-Pesa payment method is disabled for the business." }, { status: 409 });
+      if (!businessAccount.consumer_key_ciphertext || !businessAccount.consumer_secret_ciphertext || !businessAccount.passkey_ciphertext) {
+        return NextResponse.json({ error: "The business has saved its M-Pesa number but has not connected its Daraja credentials yet. Ask the owner to finish setup in Settings → Payment methods." }, { status: 409 });
+      }
+      consumerKey = decryptDarajaSecret(businessAccount.consumer_key_ciphertext);
+      consumerSecret = decryptDarajaSecret(businessAccount.consumer_secret_ciphertext);
+      passkey = decryptDarajaSecret(businessAccount.passkey_ciphertext);
+      shortcode = String(businessAccount.shortcode || businessAccount.account_number);
+      partyB = String(businessAccount.account_number);
+      transactionType = accountType === "till" ? "CustomerBuyGoodsOnline" : "CustomerPayBillOnline";
+      baseUrl = businessAccount.environment === "production" ? "https://api.safaricom.co.ke" : "https://sandbox.safaricom.co.ke";
+    } else {
+      const fallbackAllowed = accountType === "paybill" && process.env.DARAJA_ENV === "sandbox";
+      if (!fallbackAllowed) return NextResponse.json({ error: "This business has not configured the selected M-Pesa account." }, { status: 409 });
+      consumerKey = process.env.DARAJA_SANDBOX_CONSUMER_KEY ?? "";
+      consumerSecret = process.env.DARAJA_SANDBOX_CONSUMER_SECRET ?? "";
+      passkey = process.env.DARAJA_SANDBOX_PASSKEY ?? "";
+      shortcode = process.env.DARAJA_SANDBOX_SHORTCODE ?? "";
+      partyB = shortcode;
+      if (!consumerKey || !consumerSecret || !passkey || !shortcode) {
+        return NextResponse.json({ error: "Daraja Sandbox configuration is incomplete. Check the Preview environment variables." }, { status: 503 });
+      }
     }
 
     const { data: sale, error: saleError } = await session.rpc("create_pending_pos_sale", {
@@ -58,8 +91,6 @@ export async function POST(request: Request) {
     const amount = Number(sale.amount);
     const callbackToken = randomBytes(32).toString("hex");
     const callbackTokenHash = createHash("sha256").update(callbackToken).digest("hex");
-    admin = createAdminClient();
-
     const { data: stkRequest, error: insertError } = await admin.from("daraja_stk_requests").insert({
       business_id: membership.business_id, sale_id: sale.sale_id, invoice_id: null,
       customer_id: body.customer_id || null, branch_id: body.branch_id, amount,
@@ -70,7 +101,7 @@ export async function POST(request: Request) {
 
     try {
       const basic = Buffer.from(consumerKey + ":" + consumerSecret).toString("base64");
-      const authResponse = await fetch("https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials", {
+      const authResponse = await fetch(baseUrl + "/oauth/v1/generate?grant_type=client_credentials", {
         headers: { Authorization: "Basic " + basic, Accept: "application/json" }, cache: "no-store",
       });
       const authData = await authResponse.json();
@@ -80,13 +111,13 @@ export async function POST(request: Request) {
       const timestamp = ["year","month","day","hour","minute","second"].map((key) => parts.find((part) => part.type === key)?.value ?? "").join("");
       const password = Buffer.from(shortcode + passkey + timestamp).toString("base64");
       const callbackUrl = new URL("/api/daraja/callback?token=" + callbackToken, request.url).toString();
-      const stkResponse = await fetch("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest", {
+      const stkResponse = await fetch(baseUrl + "/mpesa/stkpush/v1/processrequest", {
         method: "POST",
         headers: { Authorization: "Bearer " + authData.access_token, "Content-Type": "application/json" },
         body: JSON.stringify({
           BusinessShortCode: shortcode, Password: password, Timestamp: timestamp,
-          TransactionType: "CustomerPayBillOnline", Amount: amount, PartyA: phone,
-          PartyB: shortcode, PhoneNumber: phone, CallBackURL: callbackUrl,
+          TransactionType: transactionType, Amount: amount, PartyA: phone,
+          PartyB: partyB, PhoneNumber: phone, CallBackURL: callbackUrl,
           AccountReference: String(sale.sale_number).slice(-12), TransactionDesc: "POS sale " + sale.sale_number,
         }), cache: "no-store",
       });
