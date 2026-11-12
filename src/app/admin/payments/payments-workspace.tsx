@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import BusinessNav from "@/components/business-nav";
 
@@ -59,7 +59,7 @@ export default function PaymentsWorkspace({businessId,businessName,categoryName}
       if(total<=0) throw new Error("Invoice total must be greater than zero.");
       const {data:{user}}=await db.auth.getUser();
       const suffix=crypto.randomUUID().replace(/-/g,"").slice(0,6).toUpperCase();
-      const number="INV-"+invoice.issue_date.replaceAll("-","")+"-"+suffix;
+      const number="INV-"+invoice.issue_date.replace(/-/g,"")+"-"+suffix;
       const {error:insertError}=await db.from("business_invoices").insert({
         business_id:businessId,branch_id:invoice.branch_id||null,customer_id:invoice.customer_id,invoice_number:number,
         issue_date:invoice.issue_date,due_date:invoice.due_date||null,currency_code:"KES",subtotal:total,discount:0,tax:0,total,
@@ -114,7 +114,7 @@ export default function PaymentsWorkspace({businessId,businessName,categoryName}
   const outstandingSupplier=openPurchases.reduce((s,p)=>s+Number(p.total)-paidForPurchase(p.id),0);
   const received=payments.filter(p=>p.direction==="in"&&p.status==="confirmed").reduce((s,p)=>s+Number(p.amount),0);
   const paidOut=payments.filter(p=>p.direction==="out"&&p.status==="confirmed").reduce((s,p)=>s+Number(p.amount),0);
-  const field=(label:string,control:React.ReactNode)=><label className="field"><span>{label}</span>{control}</label>;
+  const field=(label:string,control:ReactNode)=><label className="field"><span>{label}</span>{control}</label>;
   const select=(value:string,onChange:(v:string)=>void,options:{value:string;label:string}[],placeholder:string)=><select value={value} onChange={e=>onChange(e.target.value)}><option value="">{placeholder}</option>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>;
 
   return <div className="layout"><BusinessNav active="payments"/><main className="main"><header className="dashhead"><strong>{businessName}</strong><span className="muted">{categoryName}</span></header><section className="dashcontent">
