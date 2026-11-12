@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,29 +23,18 @@ export async function POST(request: Request) {
     const allowed = memberships.some((m: any) => m.role === "owner" || (m.role === "employee" && m.branch_id === branchId && m.permissions?.sales === true));
     if (!allowed) return NextResponse.json({ error: "You do not have permission to record sales for this branch." }, { status: 403 });
 
-    const { data: saleId, error: saleError } = await session.rpc("record_sale", {
+    const { data: saleId, error: saleError } = await session.rpc("record_manual_mpesa_sale", {
       p_business_id: businessId,
       p_branch_id: branchId,
       p_items: body.items,
       p_customer_id: body.customer_id || null,
-      p_payment_method: "mpesa",
       p_discount: Number(body.discount || 0),
       p_tax: Number(body.tax || 0),
-      p_amount_paid: null,
-      p_notes: [String(body.notes ?? "").trim(), "Manual " + String(body.account_type ?? "M-Pesa") + " payment reference: " + reference].filter(Boolean).join(" · "),
+      p_notes: String(body.notes ?? "").trim() || null,
+      p_account_type: String(body.account_type ?? ""),
+      p_reference: reference,
     });
-    if (saleError || !saleId) throw new Error(saleError?.message || "Unable to save the M-Pesa sale.");
-
-    const admin = createAdminClient();
-    const { error: updateError } = await admin.from("sales").update({ mpesa_transaction_code: reference })
-      .eq("id", saleId).eq("business_id", businessId);
-    if (updateError) throw updateError;
-
-    await admin.from("audit_logs").insert({
-      actor_user_id: user.id, business_id: businessId, event_type: "sale.mpesa_manual_reference_added",
-      entity_type: "sale", entity_id: saleId,
-      details: { account_type: String(body.account_type ?? "mpesa"), reference },
-    });
+    if (saleError || !saleId) throw new Error(saleError?.message || "Unable to save the M-Pesa sale and transaction code.");
 
     return NextResponse.json({ ok: true, sale_id: saleId, message: "Manual M-Pesa payment recorded." });
   } catch (error) {
