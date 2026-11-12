@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import PrintButton from "../receipt/print-button";
+import PrintButton from "../../receipt/print-button";
 
 const money=(n:unknown)=>"KSh "+Number(n??0).toLocaleString("en-KE",{minimumFractionDigits:2,maximumFractionDigits:2});
 export const dynamic="force-dynamic";
