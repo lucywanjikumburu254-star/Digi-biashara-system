@@ -44,7 +44,9 @@ export default function RegisterBusinessForm({groups,categories,agents}:{groups:
    if(paybillEnabled&&!paybill.trim()) throw new Error("Enter the PayBill number before enabling PayBill.");
    if(tillEnabled&&(!till.trim()||!tillShortcode.trim())) throw new Error("Enter both the Till number and Store / Head Office shortcode.");
    if(pochiEnabled&&!pochiPhone.trim()) throw new Error("Enter the Pochi la Biashara phone number before enabling Pochi.");
+   if([paybillKey,paybillSecret,paybillPasskey].filter(Boolean).length!==0&&[paybillKey,paybillSecret,paybillPasskey].filter(Boolean).length!==3) throw new Error("Enter all three PayBill Daraja credentials together.");
    if((paybillKey||paybillSecret||paybillPasskey)&&!paybill.trim()) throw new Error("Enter the PayBill number before adding PayBill Daraja credentials.");
+   if([tillKey,tillSecret,tillPasskey].filter(Boolean).length!==0&&[tillKey,tillSecret,tillPasskey].filter(Boolean).length!==3) throw new Error("Enter all three Till Daraja credentials together.");
    if((tillKey||tillSecret||tillPasskey)&&(!till.trim()||!tillShortcode.trim())) throw new Error("Enter the Till number and Store / Head Office shortcode before adding Till Daraja credentials.");
    if(hasCredentials&&!authorised) throw new Error("Confirm that the business owner has authorised you to enter their Daraja credentials.");
    const s=createClient();
