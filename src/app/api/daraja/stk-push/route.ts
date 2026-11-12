@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function normalisePhone(value: unknown) {
-  const digits = String(value ?? "").replace(/\\D/g, "");
+  const digits = String(value ?? "").replace(/\D/g, "");
   if (/^0[17]\\d{8}$/.test(digits)) return "254" + digits.slice(1);
   if (/^[17]\\d{8}$/.test(digits)) return "254" + digits;
   if (/^254[17]\\d{8}$/.test(digits)) return digits;
@@ -24,8 +24,14 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const phone = normalisePhone(body.phone_number);
-    if (!phone || !Array.isArray(body.items) || !body.items.length || !body.branch_id) {
-      return NextResponse.json({ error: "Enter a valid Kenyan M-Pesa phone number and complete the POS sale details." }, { status: 400 });
+    if (!phone) {
+      return NextResponse.json({ error: "Enter a valid Kenyan M-Pesa phone number, for example 0712345678 or 254712345678." }, { status: 400 });
+    }
+    if (!Array.isArray(body.items) || !body.items.length) {
+      return NextResponse.json({ error: "Add at least one product to the POS cart before sending the M-Pesa prompt." }, { status: 400 });
+    }
+    if (!body.branch_id) {
+      return NextResponse.json({ error: "Select a branch before sending the M-Pesa prompt." }, { status: 400 });
     }
 
     const { data: memberships, error: membershipError } = await session.from("business_memberships")
