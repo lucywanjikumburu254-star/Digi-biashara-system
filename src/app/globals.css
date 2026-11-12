@@ -132,6 +132,15 @@
 .employee-pos .cart-row span{flex:1}
 @media(max-width:640px){.employee-pos-head,.employee-pos-content{padding-left:16px;padding-right:16px}.employee-pos .form-grid{grid-template-columns:1fr}.employee-pos .checkout-total-row{font-size:16px}}
 
+/* Products & Services catalogue controls */
+.catalog-tools{margin:12px 0 16px;padding:14px;background:var(--surface-soft,#fff8f0);border:1px solid var(--line);border-radius:12px}
+.catalog-counts{display:flex;align-items:center;gap:8px 20px;flex-wrap:wrap;margin-bottom:10px;color:var(--muted);font-size:13px}
+.catalog-counts b{color:var(--ink);font-size:16px}
+.catalog-tools .form-grid{gap:0 16px}
+.catalog-tools .field{margin:6px 0}
+.catalog-tools .field input,.catalog-tools .field select{border:1px solid #eadde1;border-radius:9px;padding:11px 12px;background:#fff;color:var(--ink);width:100%;min-width:0}
+@media(max-width:700px){.catalog-tools .form-grid{grid-template-columns:1fr}.catalog-counts{gap:8px 14px}}
+
 /* Smart Product Scanner */
 .scanner-launch{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:18px}
 .scanner-launch h2{margin:0 0 6px}.scanner-launch p{margin:0}
