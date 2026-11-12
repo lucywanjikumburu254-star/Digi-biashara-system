@@ -63,7 +63,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
       address:"",phone:"",opening_time:"",closing_time:"",email:"",notes:"",
       contact_person:"",job_title:"",employment_type:"permanent",monthly_salary:"0",
       category_expense:"General",description:"",amount:"",payment_method:"cash",
-      branch_id:"",customer_id:"",supplier_id:"",product_id:"",quantity:"1",unit_price:"",mpesa_transaction_code:"",
+      branch_id:"",customer_id:"",supplier_id:"",product_id:"",quantity:"1",unit_price:"",
       unit_cost:"",discount:"0",tax:"0",amount_paid:"",expense_date:new Date().toISOString().slice(0,10),
       starts_at:"",ends_at:"",service_id:"",staff_id:""
     });
@@ -327,7 +327,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
         </section>
         <aside className="pos-payment">
           <div className="pos-section-title"><div><h3>Payment</h3><p className="muted">Choose how the customer pays.</p></div></div>
-          <div className="pos-method-grid">{methods.map(m=><button type="button" key={m.value} className={"pos-method "+(form.payment_method===m.value?"selected":"")} onClick={()=>{set("payment_method",m.value);if(m.value==="cash")set("mpesa_transaction_code","");}}><span>{m.icon}</span><b>{m.label}</b></button>)}</div>
+          <div className="pos-method-grid">{methods.map(m=><button type="button" key={m.value} className={"pos-method "+(form.payment_method===m.value?"selected":"")} onClick={()=>set("payment_method",m.value)}><span>{m.icon}</span><b>{m.label}</b></button>)}</div>
           {form.payment_method==="mpesa"&&<label className="field pos-mpesa-code"><span>Customer M-Pesa phone number</span><input type="tel" required value={form.phone??""} onChange={e=>set("phone",e.target.value)} placeholder="07XXXXXXXX or 2547XXXXXXXX"/><small>Digi Biashara will send an STK prompt. The customer approves it on their phone.</small></label>}
           <div className="pos-summary">
             <div className="pos-summary-line"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
