@@ -21,10 +21,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bu
     const location = String(body.location ?? "").trim();
     const phoneRaw = String(body.phone ?? "").trim();
     if (!name || !categoryId) return NextResponse.json({ error: "Business name and category are required." }, { status: 400 });
-    if (phoneRaw && !/^(?:\\+?254|0)?[17]\\d{8}$/.test(phoneRaw.replace(/[\\s-]/g, ""))) {
+    const digits = phoneRaw.replace(/[\s-]/g, "");
+    if (digits && !/^(?:\+?254|0)?[17]\d{8}$/.test(digits)) {
       return NextResponse.json({ error: "Enter a valid Kenyan business phone number." }, { status: 400 });
     }
-    const phone = phoneRaw ? (phoneRaw.replace(/[\\s-]/g, "").startsWith("0") ? "254" + phoneRaw.replace(/[\\s-]/g, "").slice(1) : phoneRaw.replace(/[\\s-]/g, "").replace(/^\\+/, "")) : null;
+    const phone = digits ? (digits.startsWith("0") ? "254" + digits.slice(1) : digits.replace(/^\+/, "")) : null;
     const admin = createAdminClient();
     const { error } = await admin.from("businesses").update({ name, category_id: categoryId, location: location || null, phone }).eq("id", businessId);
     if (error) throw error;
