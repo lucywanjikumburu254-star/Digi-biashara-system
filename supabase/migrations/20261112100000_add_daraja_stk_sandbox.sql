@@ -56,7 +56,7 @@ create or replace function public.process_daraja_stk_callback(
 ) returns jsonb
 language plpgsql
 security definer
-set search_path = public, private, pg_temp
+set search_path = ''
 as $$
 declare
   v_request public.daraja_stk_requests%rowtype;
