@@ -37,7 +37,7 @@ on public.daraja_stk_requests for select to authenticated
 using (private.is_business_owner(business_id) or private.is_platform_admin());
 
 create unique index if not exists business_payments_provider_idempotency_uidx
-  on public.business_payments (provider, idempotency_key)
+  on public.business_payments (business_id, provider, idempotency_key)
   where provider is not null and idempotency_key is not null;
 
 create unique index if not exists payment_allocations_payment_invoice_uidx
@@ -100,6 +100,19 @@ begin
     raise exception 'Successful Daraja callback is missing the M-Pesa receipt number';
   end if;
 
+  select id into v_payment_id
+  from public.business_payments
+  where business_id = v_request.business_id
+    and payment_method = 'mpesa'
+    and external_reference = p_mpesa_receipt_number;
+
+  if v_payment_id is not null then
+    update public.daraja_stk_requests
+    set status = 'confirmed', payment_id = v_payment_id, updated_at = now()
+    where id = v_request.id;
+    return jsonb_build_object('ok', true, 'duplicate_receipt', true, 'status', 'confirmed', 'payment_id', v_payment_id);
+  end if;
+
   select greatest(
     0,
     i.total - coalesce(sum(a.amount) filter (where bp.status = 'confirmed'), 0)
@@ -124,15 +137,15 @@ begin
     coalesce(p_phone_number, v_request.phone_number),
     'Safaricom Daraja STK Push · ' || v_request.account_reference,
     'daraja', 'daraja-stk-' || p_checkout_request_id,
-    v_request.created_by, v_request.created_by
+    v_request.created_by, null
   )
-  on conflict (provider, idempotency_key) where provider is not null and idempotency_key is not null
+  on conflict (business_id, provider, idempotency_key) where provider is not null and idempotency_key is not null
   do nothing
   returning id into v_payment_id;
 
   if v_payment_id is null then
     select id into v_payment_id from public.business_payments
-    where provider = 'daraja' and idempotency_key = 'daraja-stk-' || p_checkout_request_id;
+    where business_id = v_request.business_id and provider = 'daraja' and idempotency_key = 'daraja-stk-' || p_checkout_request_id;
   end if;
 
   if v_allocate > 0 then
