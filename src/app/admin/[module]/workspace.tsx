@@ -45,7 +45,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   const [editingId,setEditingId] = useState<string|null>(null);
   const [message,setMessage] = useState("");
   const [error,setError] = useState("");
-  const [form,setForm] = useState<Record<string,string>>({});
+  const [form,setForm] = useState<Record<string,string>>({payment_method:"cash"});
   const [cart,setCart] = useState<CartLine[]>([]);
   const [lineProduct,setLineProduct] = useState("");
   const [lineQty,setLineQty] = useState("1");
@@ -371,7 +371,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
             {form.payment_method==="cash"&&<><label className="pos-received"><span>Amount received (KSh)</span><input type="number" min="0" step="0.01" value={form.amount_paid??""} onChange={e=>set("amount_paid",e.target.value)} placeholder={money(total).replace("KSh ","")}/><small>Leave blank if the customer pays the full amount.</small></label><div className={"pos-payment-result "+(balance>0?"is-balance":"is-change")}><span>{balance>0?"Balance remaining":"Change to give"}</span><strong>{money(balance>0?balance:change)}</strong></div></>}
             {form.payment_method.startsWith("mpesa_")&&<div className="pos-payment-result"><span>{selectedUsesStk?"Amount to request":"Amount to record"}</span><strong>{money(total)}</strong></div>}
           </div>
-          <button className="btn pos-complete" disabled={saving||cart.length===0||!form.branch_id||total<=0||received<0||(form.payment_method==="mpesa"&&!form.phone.trim())}>{saving?"Processing…":form.payment_method==="mpesa"?"Send M-Pesa prompt  →":"Complete sale  →"}</button>
+          <button className="btn pos-complete" disabled={saving||cart.length===0||!form.branch_id||total<=0||received<0||(form.payment_method.startsWith("mpesa_")&&(selectedUsesStk?!form.phone.trim():!form.mpesa_reference.trim()))}>{saving?"Processing…":form.payment_method==="mpesa"?"Send M-Pesa prompt  →":"Complete sale  →"}</button>
           <p className="pos-secure-note">{form.payment_method.startsWith("mpesa_")?(selectedUsesStk?"The sale stays pending and stock is unchanged until Safaricom confirms payment.":"Manual payment must be checked in the business M-Pesa account before recording."): "Review the amount before completing. Stock updates when the sale is saved."}</p>
         </aside>
       </div>
