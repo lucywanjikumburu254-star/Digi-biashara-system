@@ -10,7 +10,7 @@ create or replace function public.create_pending_pos_sale(
  p_discount numeric default 0,p_tax numeric default 0,p_notes text default null
 ) returns jsonb language plpgsql security definer set search_path='' as $$
 declare v_sale_id uuid; v_sale_number text; v_item jsonb; v_product public.products%rowtype;
- v_qty numeric; v_price numeric; v_subtotal numeric:=0; v_total numeric; v_needed numeric; v_available numeric;
+ v_qty numeric; v_price numeric; v_product_id uuid; v_subtotal numeric:=0; v_total numeric; v_needed numeric; v_available numeric;
 begin
  if auth.uid() is null or not private.is_business_member(p_business_id) then raise exception 'Active business membership required.'; end if;
  if not private.business_is_operational(p_business_id) then raise exception 'Business workspace is paused.'; end if;
