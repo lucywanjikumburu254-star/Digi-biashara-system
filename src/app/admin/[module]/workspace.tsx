@@ -55,7 +55,6 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   const [catalogSearch,setCatalogSearch] = useState("");
   const [catalogView,setCatalogView] = useState<"active"|"inactive"|"all">("active");
   const [paymentAccounts,setPaymentAccounts] = useState<MpesaAccount[]>([]);
-  const [sandboxFallbackAvailable,setSandboxFallbackAvailable] = useState(false);
 
   const reset = useCallback(() => {
     const salon = /salon|beauty|barber|spa/i.test(categoryName);
@@ -126,7 +125,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     let active=true;
     fetch("/api/business/payment-settings?business_id="+encodeURIComponent(businessId),{cache:"no-store"})
       .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||"Unable to load payment methods.");return data;})
-      .then(data=>{if(active){setPaymentAccounts((data.accounts??[]).filter((a:MpesaAccount)=>a.enabled));setSandboxFallbackAvailable(Boolean(data.sandbox_fallback_available));}})
+      .then(data=>{if(active){setPaymentAccounts((data.accounts??[]).filter((a:MpesaAccount)=>a.enabled));}})
       .catch(()=>{if(active)setPaymentAccounts([]);});
     return ()=>{active=false;};
   },[businessId]);
@@ -297,7 +296,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     const change=Math.max(0,received-total);
     const methods=[
       {value:"cash",label:"Cash",icon:"💵"},
-      ...(paymentAccounts.length?paymentAccounts.map(a=>({value:"mpesa_"+a.account_type,label:a.account_type==="pochi"?"Pochi la Biashara":a.account_type==="till"?"M-Pesa Till":"M-Pesa PayBill",icon:a.account_type==="pochi"?"📲":"📱"})):(sandboxFallbackAvailable?[{value:"mpesa_paybill",label:"M-Pesa Sandbox",icon:"📱"}]:[]))
+      ...paymentAccounts.map(a=>({value:"mpesa_"+a.account_type,label:a.account_type==="pochi"?"Pochi la Biashara":a.account_type==="till"?"M-Pesa Till":"M-Pesa PayBill",icon:a.account_type==="pochi"?"📲":"📱"}))
     ];
     const selectedMpesaType=form.payment_method.startsWith("mpesa_")?form.payment_method.replace("mpesa_",""):"";
     const selectedMpesaAccount=paymentAccounts.find(a=>a.account_type===selectedMpesaType);
