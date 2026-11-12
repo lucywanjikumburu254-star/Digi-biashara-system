@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import AgentActions from "./agent-actions";
 import ApplicationActions from "./application-actions";
-import CommissionSettings from "./commission-settings";\nimport CommissionActions from "./commission-actions";
+import CommissionSettings from "./commission-settings";
+import CommissionActions from "./commission-actions";
 import {redirect} from "next/navigation";
 import {createClient} from "@/lib/supabase/server";
 import AgentCreateForm from "./agent-form";
