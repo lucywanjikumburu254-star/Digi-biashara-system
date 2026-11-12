@@ -27,6 +27,8 @@ export default function PaymentsWorkspace({businessId,businessName,categoryName}
   const [invoice,setInvoice]=useState({customer_id:"",branch_id:"",issue_date:dateNow(),due_date:"",notes:""});
   const [lines,setLines]=useState<Line[]>([{description:"",quantity:"1",unit_price:""}]);
   const [payment,setPayment]=useState({direction:"in",document_id:"",branch_id:"",party_id:"",amount:"",method:"cash",payment_date:new Date().toISOString().slice(0,16),reference:"",payer_payee:"",notes:"",cheque_number:"",cheque_bank:"",cheque_date:"",cheque_deposit_date:""});
+  const [stkInvoice,setStkInvoice]=useState<Row|null>(null);
+  const [stkPhone,setStkPhone]=useState("");
   const notify=(s:string)=>{setMessage(s);setError("");};
   const load=useCallback(async()=>{
     setLoading(true);setError("");
@@ -99,6 +101,25 @@ export default function PaymentsWorkspace({businessId,businessName,categoryName}
     finally{setSaving(false);}
   }
 
+  async function startStkPush(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();
+    if(!stkInvoice) return;
+    setSaving(true);setError("");setMessage("");
+    try{
+      const balance=Math.max(0,Number(stkInvoice.total)-paidForInvoice(stkInvoice.id));
+      if(!Number.isSafeInteger(balance)||balance<=0) throw new Error("The outstanding invoice balance must be a whole KSh amount for M-Pesa STK Push.");
+      const response=await fetch("/api/daraja/stk-push",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({invoice_id:stkInvoice.id,phone_number:stkPhone,amount:balance})
+      });
+      const result=await response.json();
+      if(!response.ok) throw new Error(result.error||"Unable to send the M-Pesa prompt.");
+      notify("STK request accepted by Safaricom Sandbox. Ask the customer to check their phone and approve the test payment.");
+      setStkInvoice(null);setStkPhone("");
+    }catch(e){setError(e instanceof Error?e.message:"Unable to start the M-Pesa payment.");}
+    finally{setSaving(false);}
+  }
+
   async function updateCheque(row:Row,status:"deposited"|"cleared"|"bounced"|"cancelled"){
     setSaving(true);setError("");setMessage("");
     try{
@@ -132,7 +153,13 @@ export default function PaymentsWorkspace({businessId,businessName,categoryName}
       {lines.map((l,i)=><div className="payment-line" key={i}><label className="field"><span>Description</span><input value={l.description} onChange={e=>setLines(v=>v.map((x,j)=>j===i?{...x,description:e.target.value}:x))} required placeholder="Product or service"/></label><label className="field"><span>Qty</span><input type="number" min="0.01" step="0.01" value={l.quantity} onChange={e=>setLines(v=>v.map((x,j)=>j===i?{...x,quantity:e.target.value}:x))} required/></label><label className="field"><span>Unit price (KSh)</span><input type="number" min="0" step="0.01" value={l.unit_price} onChange={e=>setLines(v=>v.map((x,j)=>j===i?{...x,unit_price:e.target.value}:x))} required/></label><strong>{money(Number(l.quantity||0)*Number(l.unit_price||0))}</strong>{lines.length>1&&<button type="button" className="text-button" onClick={()=>setLines(v=>v.filter((_,j)=>j!==i))}>Remove</button>}</div>)}
       </div>{field("Notes",<input value={invoice.notes} onChange={e=>setInvoice(p=>({...p,notes:e.target.value}))} placeholder="Optional notes"/>)}
       <div className="payment-total"><span>Invoice total</span><strong>{money(total)}</strong></div><div className="form-actions"><button className="btn" disabled={saving}>{saving?"Saving…":"Create invoice"}</button></div></form>
-      <div className="panel"><div className="panelhead"><h2>Customer invoices</h2><button className="btn secondary small" type="button" onClick={()=>void load()}>Refresh</button></div>{loading?<div className="empty">Loading…</div>:invoices.length===0?<div className="empty">No invoices yet. Create the first one above.</div>:<div className="table-wrap"><table className="table"><thead><tr><th>Invoice</th><th>Customer</th><th>Issued</th><th>Due</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th></tr></thead><tbody>{invoices.map(i=>{const paid=paidForInvoice(i.id),balance=Math.max(0,Number(i.total)-paid),late=i.due_date&&i.due_date<dateNow()&&balance>0.004;return <tr key={i.id}><td><Link className="sale-link" href={"/admin/payments/invoice/"+i.id}>{i.invoice_number}</Link></td><td>{i.customers?.name??"—"}</td><td>{i.issue_date}</td><td>{i.due_date??"—"}</td><td>{money(i.total)}</td><td>{money(paid)}</td><td>{money(balance)}</td><td><span className={"pill "+(i.status==="void"?"off":balance<=0.004?"":"warn")}>{i.status==="void"?"Void":balance<=0.004?"Paid":late?"Overdue":paid>0?"Part-paid":"Unpaid"}</span></td></tr>})}</tbody></table></div>}</div></>}
+      {stkInvoice&&<form className="panel workspace-form" onSubmit={startStkPush}>
+        <div className="panelhead"><div><h2>Request M-Pesa payment</h2><p className="muted compact-help">{stkInvoice.invoice_number} · Outstanding {money(Number(stkInvoice.total)-paidForInvoice(stkInvoice.id))}</p></div><button type="button" className="btn secondary small" onClick={()=>setStkInvoice(null)}>Cancel</button></div>
+        <label className="field"><span>Customer M-Pesa phone number</span><input type="tel" inputMode="tel" value={stkPhone} onChange={e=>setStkPhone(e.target.value)} placeholder="07XXXXXXXX or 2547XXXXXXXX" required/></label>
+        <p className="muted compact-help">Sandbox only. This sends a test prompt; it does not charge a real customer.</p>
+        <div className="form-actions"><button className="btn" disabled={saving}>{saving?"Sending…":"Send STK prompt"}</button></div>
+      </form>}
+      <div className="panel"><div className="panelhead"><h2>Customer invoices</h2><button className="btn secondary small" type="button" onClick={()=>void load()}>Refresh</button></div>{loading?<div className="empty">Loading…</div>:invoices.length===0?<div className="empty">No invoices yet. Create the first one above.</div>:<div className="table-wrap"><table className="table"><thead><tr><th>Invoice</th><th>Customer</th><th>Issued</th><th>Due</th><th>Total</th><th>Paid</th><th>Balance</th><th>Status</th><th>M-Pesa</th></tr></thead><tbody>{invoices.map(i=>{const paid=paidForInvoice(i.id),balance=Math.max(0,Number(i.total)-paid),late=i.due_date&&i.due_date<dateNow()&&balance>0.004;return <tr key={i.id}><td><Link className="sale-link" href={"/admin/payments/invoice/"+i.id}>{i.invoice_number}</Link></td><td>{i.customers?.name??"—"}</td><td>{i.issue_date}</td><td>{i.due_date??"—"}</td><td>{money(i.total)}</td><td>{money(paid)}</td><td>{money(balance)}</td><td><span className={"pill "+(i.status==="void"?"off":balance<=0.004?"":"warn")}>{i.status==="void"?"Void":balance<=0.004?"Paid":late?"Overdue":paid>0?"Part-paid":"Unpaid"}</span></td><td><button type="button" className="btn secondary small" disabled={saving||balance<=0.004} onClick={()=>{setStkInvoice(i);setStkPhone(i.customers?.phone??"");}}>Request M-Pesa</button></td></tr>})}</tbody></table></div>}</div></>}
     {(tab==="receive"||tab==="pay")&&<form className="panel workspace-form" onSubmit={recordPayment}><div className="panelhead"><div><h2>{tab==="receive"?"Receive money from a customer":"Pay a supplier"}</h2><p className="muted compact-help">Record each actual payment separately. Part-payments are supported.</p></div></div>
       {field(tab==="receive"?"Customer":"Supplier",select(payment.party_id,v=>setPayment(p=>({...p,party_id:v,document_id:""})),(tab==="receive"?customers:suppliers).map(x=>({value:x.id,label:x.name})),"Choose party"))}
       {field("Allocate to document (optional)",select(payment.document_id,v=>setPayment(p=>({...p,document_id:v})),(tab==="receive"?openInvoices.filter(i=>i.customer_id===payment.party_id).map(i=>({value:i.id,label:i.invoice_number+" · balance "+money(Number(i.total)-paidForInvoice(i.id))})):openPurchases.filter(p=>p.supplier_id===payment.party_id).map(p=>({value:p.id,label:p.purchase_number+" · balance "+money(Number(p.total)-paidForPurchase(p.id))}))),"Leave unallocated"))}
