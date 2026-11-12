@@ -59,6 +59,7 @@ export async function GET(request: Request) {
     if (rowsError) throw rowsError;
     return NextResponse.json({
       contact_phone: business?.phone ?? "",
+      sandbox_fallback_available: !(rows ?? []).some((row: any) => row.account_type === "paybill") && process.env.DARAJA_ENV === "sandbox" && Boolean(process.env.DARAJA_SANDBOX_CONSUMER_KEY && process.env.DARAJA_SANDBOX_CONSUMER_SECRET && process.env.DARAJA_SANDBOX_PASSKEY && process.env.DARAJA_SANDBOX_SHORTCODE),
       accounts: (rows ?? []).map((row: any) => ({
         account_type: row.account_type,
         account_number: row.account_number,
