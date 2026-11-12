@@ -11,7 +11,7 @@ function metadataValue(items: any[], name: string) {
 
 function parseTransactionDate(value: unknown) {
   const raw = String(value ?? "");
-  if (!/^\\d{14}$/.test(raw)) return null;
+  if (!/^\d{14}$/.test(raw)) return null;
   const iso = raw.slice(0,4)+"-"+raw.slice(4,6)+"-"+raw.slice(6,8)+"T"+
     raw.slice(8,10)+":"+raw.slice(10,12)+":"+raw.slice(12,14)+"+03:00";
   const date = new Date(iso);
