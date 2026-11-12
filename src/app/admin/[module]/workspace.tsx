@@ -51,6 +51,8 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   const [linePrice,setLinePrice] = useState("");
   const [lineCost,setLineCost] = useState("");
   const [scannerOpen,setScannerOpen] = useState(false);
+  const [catalogSearch,setCatalogSearch] = useState("");
+  const [catalogView,setCatalogView] = useState<"active"|"inactive"|"all">("active");
 
   const reset = useCallback(() => {
     const salon = /salon|beauty|barber|spa/i.test(categoryName);
@@ -73,13 +75,13 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     try {
       const [br,pr,cu,su,st] = await Promise.all([
         db.from("branches").select("*").eq("business_id",businessId).order("created_at"),
-        db.from("products").select("*").eq("business_id",businessId).eq("is_active",true).order("name"),
+        db.from("products").select("*").eq("business_id",businessId).eq("is_draft",false).order("name"),
         db.from("customers").select("*").eq("business_id",businessId).order("name"),
         db.from("suppliers").select("*").eq("business_id",businessId).order("name"),
         db.from("business_staff").select("*,branches(name)").eq("business_id",businessId).order("full_name")
       ]);
       for (const r of [br,pr,cu,su,st]) if(r.error) throw r.error;
-      setBranches(br.data??[]);setProducts(pr.data??[]);setCustomers(cu.data??[]);setSuppliers(su.data??[]);setStaff(st.data??[]);
+      setBranches(br.data??[]);setProducts((pr.data??[]).filter((p:Row)=>p.is_active));setCustomers(cu.data??[]);setSuppliers(su.data??[]);setStaff(st.data??[]);
       let data:Row[]=[];
       if(moduleName==="branches") data=br.data??[];
       else if(moduleName==="catalog") data=pr.data??[];
@@ -125,7 +127,22 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     try {
       let table="";let record:any={business_id:businessId};
       if(moduleName==="branches"){table="branches";Object.assign(record,{name:form.name,address:form.address||null,phone:form.phone||null,opening_time:form.opening_time||null,closing_time:form.closing_time||null});}
-      if(moduleName==="catalog"){table="products";Object.assign(record,{name:form.name,sku:form.sku||null,barcode:form.barcode||null,description:form.description||null,item_type:form.item_type,category:form.category||null,unit:form.unit||"piece",cost_price:Number(form.cost_price||0),selling_price:Number(form.selling_price||0),reorder_level:Number(form.reorder_level||0),track_stock:form.item_type==="service"?false:form.track_stock==="true",created_by:(await db.auth.getUser()).data.user?.id});}
+      if(moduleName==="catalog"){
+        const name=form.name.trim();
+        const cost=Number(form.cost_price||0), price=Number(form.selling_price||0), reorder=Number(form.reorder_level||0);
+        if(!name) throw new Error("Enter a product or service name.");
+        if(![cost,price,reorder].every(Number.isFinite)||cost<0||price<0||reorder<0) throw new Error("Prices and reorder level must be zero or greater.");
+        for(const [label,column,value] of [["SKU","sku",form.sku.trim()],["Barcode","barcode",form.barcode.trim()]] as const){
+          if(!value) continue;
+          let duplicateQuery=db.from("products").select("id,name").eq("business_id",businessId).eq(column,value).eq("is_draft",false);
+          if(editingId) duplicateQuery=duplicateQuery.neq("id",editingId);
+          const duplicate=await duplicateQuery.limit(1);
+          if(duplicate.error) throw duplicate.error;
+          if(duplicate.data?.length) throw new Error("That "+label+" is already used by "+duplicate.data[0].name+". Enter a different "+label.toLowerCase()+".");
+        }
+        table="products";
+        Object.assign(record,{name,sku:form.sku.trim()||null,barcode:form.barcode.trim()||null,description:form.description.trim()||null,item_type:form.item_type,category:form.category.trim()||null,unit:form.unit.trim()||"piece",cost_price:cost,selling_price:price,reorder_level:reorder,track_stock:form.item_type==="service"?false:form.track_stock==="true",created_by:(await db.auth.getUser()).data.user?.id});
+      }
       if(moduleName==="customers"){table="customers";Object.assign(record,{name:form.name,phone:form.phone||null,email:form.email||null,notes:form.notes||null});}
       if(moduleName==="suppliers"){table="suppliers";Object.assign(record,{name:form.name,contact_person:form.contact_person||null,phone:form.phone||null,email:form.email||null,address:form.address||null,notes:form.notes||null});}
       if(moduleName==="staff"){table="business_staff";Object.assign(record,{full_name:form.name,branch_id:form.branch_id||null,email:form.email||null,phone:form.phone||null,job_title:form.job_title||"Sales staff",employment_type:"permanent",monthly_salary:0,notes:form.notes||null,created_by:(await db.auth.getUser()).data.user?.id});}
@@ -190,6 +207,17 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     finally{setSaving(false);}
   }
 
+  async function reactivateProduct(row:Row){
+    setSaving(true);setError("");setMessage("");
+    try{
+      const result=await db.from("products").update({is_active:true}).eq("id",row.id).eq("business_id",businessId).eq("is_draft",false);
+      if(result.error) throw result.error;
+      notify("Product or service reactivated. It is now available in the relevant sales and service lists.");
+      await load();
+    }catch(e){setError(e instanceof Error?e.message:"Unable to reactivate this item.");}
+    finally{setSaving(false);}
+  }
+
   async function addLine(){
     const p=products.find(x=>x.id===lineProduct);
     if(!p){setError("Choose an item first.");return;}
@@ -231,7 +259,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     return <label className="field" key={key}><span>{label}</span><input type={type} required={required} placeholder={placeholder} value={form[key]??""} onChange={e=>set(key,e.target.value)}/></label>;
   }
   function select(label:string,key:string,opts:{value:string;label:string}[],required=false){
-    return <label className="field" key={key}><span>{label}</span><select required={required} value={form[key]??""} onChange={e=>set(key,e.target.value)}><option value="">Select {label.toLowerCase()}</option>{opts.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
+    return <label className="field" key={key}><span>{label}</span><select required={required} value={form[key]??""} onChange={e=>{const value=e.target.value;set(key,value);if(moduleName==="catalog"&&key==="item_type")set("track_stock",value==="service"?"false":"true");}}><option value="">Select {label.toLowerCase()}</option>{opts.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
   }
   function formPanel(children:ReactNode,onSubmit=save,button="Save record"){
     return <form className="panel workspace-form" onSubmit={onSubmit as any}><div className="panelhead"><h2>{editingId?"Edit record":"Add new record"}</h2>{editingId&&<button type="button" className="btn secondary small" onClick={reset}>Cancel edit</button>}</div><div className="form-grid">{children}</div><div className="form-actions"><button className="btn" disabled={saving}>{saving?"Saving…":button}</button></div></form>;
@@ -334,7 +362,12 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
 
   function renderList(){
     if(moduleName==="branches") return <table className="table"><thead><tr><th>Branch</th><th>Address</th><th>Phone</th><th>Opening hours</th><th>Status</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.name}</td><td>{r.address??"—"}</td><td>{r.phone??"—"}</td><td>{r.opening_time??"—"} – {r.closing_time??"—"}</td><td>{r.status}</td><td>{r.status==="active"&&editActions(r)}</td></tr>)}</tbody></table>;
-    if(moduleName==="catalog") return <table className="table"><thead><tr><th>Name</th><th>Type</th><th>SKU</th><th>Cost</th><th>Price</th><th>Track stock</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.name}</b><small>{r.category??""}</small></td><td>{r.item_type}</td><td>{r.sku??"—"}</td><td>{money(r.cost_price)}</td><td>{money(r.selling_price)}</td><td>{r.track_stock?"Yes":"No"}</td><td>{editActions(r)}</td></tr>)}</tbody></table>;
+    if(moduleName==="catalog"){
+      const query=catalogSearch.trim().toLowerCase();
+      const catalogRows=rows.filter(r=>catalogView==="all"||(catalogView==="active"?r.is_active:!r.is_active))
+        .filter(r=>!query||[r.name,r.sku,r.barcode,r.category,r.description].some(v=>String(v??"").toLowerCase().includes(query)));
+      return <table className="table"><thead><tr><th>Name</th><th>Type</th><th>SKU / Barcode</th><th>Cost</th><th>Price</th><th>Stock tracking</th><th>Status</th><th>Actions</th></tr></thead><tbody>{catalogRows.map(r=><tr key={r.id}><td><b>{r.name}</b><small>{r.category??""}</small></td><td>{r.item_type==="service"?"Service":"Product"}</td><td>{r.sku??"—"}<small>{r.barcode??""}</small></td><td>{money(r.cost_price)}</td><td>{money(r.selling_price)}</td><td>{r.item_type==="service"?"Not applicable":r.track_stock?"Yes":"No"}</td><td><span className={"pill "+(!r.is_active?"warn":"")}>{r.is_active?"Active":"Inactive"}</span></td><td>{r.is_active?editActions(r):<div className="row-actions"><button type="button" className="btn secondary small" onClick={()=>edit(r)}>Edit</button><button type="button" className="btn small" disabled={saving} onClick={()=>void reactivateProduct(r)}>Reactivate</button></div>}</td></tr>)}</tbody></table>;
+    }
     if(moduleName==="customers") return <table className="table"><thead><tr><th>Customer</th><th>Phone</th><th>Email</th><th>Notes</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.name}</td><td>{r.phone??"—"}</td><td>{r.email??"—"}</td><td>{r.notes??"—"}</td><td><button className="btn secondary small" onClick={()=>edit(r)}>Edit</button></td></tr>)}</tbody></table>;
     if(moduleName==="suppliers") return <table className="table"><thead><tr><th>Supplier</th><th>Contact</th><th>Phone</th><th>Email</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.name}</td><td>{r.contact_person??"—"}</td><td>{r.phone??"—"}</td><td>{r.email??"—"}</td><td><button className="btn secondary small" onClick={()=>edit(r)}>Edit</button></td></tr>)}</tbody></table>;
     if(moduleName==="staff") return <table className="table"><thead><tr><th>Staff member</th><th>Login email</th><th>Branch</th><th>Phone</th><th>Access</th><th>Status</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td><b>{r.full_name}</b><small>{r.job_title??"Sales staff"}</small></td><td>{r.email??"—"}</td><td>{r.branches?.name??"Not assigned"}</td><td>{r.phone??"—"}</td><td><span className="pill">Sales only</span></td><td>{r.status}</td><td>{r.status==="active"&&editActions(r)}</td></tr>)}</tbody></table>;
@@ -361,6 +394,13 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     {message&&<div className="success">{message}</div>}{error&&<div className="error" role="alert">{error}</div>}
     {moduleName==="reports"?reportPanel():renderForm()}
     <div className="panel"><div className="panelhead"><h2>{moduleName==="inventory"?"Current stock by branch":"Saved "+TITLES[moduleName].toLowerCase()}</h2><button className="btn secondary small" onClick={()=>void load()} disabled={loading}>Refresh</button></div>
+      {moduleName==="catalog"&&<div className="catalog-tools">
+        <div className="catalog-counts"><span><b>{rows.filter(r=>r.is_active).length}</b> active</span><span><b>{rows.filter(r=>!r.is_active).length}</b> inactive</span><span><b>{rows.filter(r=>r.item_type==="product").length}</b> products</span><span><b>{rows.filter(r=>r.item_type==="service").length}</b> services</span></div>
+        <div className="form-grid">
+          <label className="field"><span>Search name, SKU, barcode or category</span><input type="search" value={catalogSearch} onChange={e=>setCatalogSearch(e.target.value)} placeholder="Start typing to search…" /></label>
+          <label className="field"><span>Show items</span><select value={catalogView} onChange={e=>setCatalogView(e.target.value as "active"|"inactive"|"all")}><option value="active">Active items</option><option value="inactive">Inactive items</option><option value="all">All items</option></select></label>
+        </div>
+      </div>}
       {loading?<div className="empty">Loading records…</div>:rows.length===0?<div className="empty">No records yet. Use the form above to add your first record.</div>:moduleName==="reports"?<div className="empty">Summary is calculated from saved transactions.</div>:<div className="table-wrap">{renderList()}</div>}
     </div>
     {moduleName==="inventory"&&<div className="panel"><h2>Stock tracking</h2><p className="muted">Sales reduce stock, received purchases increase stock, and manual adjustments create an auditable movement. Add stocked products in Products & services first.</p></div>}
