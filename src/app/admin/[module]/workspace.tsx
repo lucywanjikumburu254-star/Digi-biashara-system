@@ -9,6 +9,7 @@ import ProductScanner from "./product-scanner";
 type ModuleName = "branches" | "catalog" | "customers" | "suppliers" | "sales" | "inventory" | "purchases" | "expenses" | "staff" | "appointments" | "reports";
 type Row = Record<string, any>;
 type CartLine = { product_id: string; quantity: number; unit_price?: number; unit_cost?: number };
+type MpesaAccount = { account_type: "paybill" | "till" | "pochi"; account_number: string; shortcode?: string; enabled: boolean; credentials_configured: boolean };
 
 const TITLES: Record<ModuleName,string> = {
   branches:"Branches", catalog:"Products & services", customers:"Customers", suppliers:"Suppliers",
@@ -53,6 +54,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   const [scannerOpen,setScannerOpen] = useState(false);
   const [catalogSearch,setCatalogSearch] = useState("");
   const [catalogView,setCatalogView] = useState<"active"|"inactive"|"all">("active");
+  const [paymentAccounts,setPaymentAccounts] = useState<MpesaAccount[]>([]);
 
   const reset = useCallback(() => {
     const salon = /salon|beauty|barber|spa/i.test(categoryName);
@@ -63,7 +65,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
       address:"",phone:"",opening_time:"",closing_time:"",email:"",notes:"",
       contact_person:"",job_title:"",employment_type:"permanent",monthly_salary:"0",
       category_expense:"General",description:"",amount:"",payment_method:"cash",
-      branch_id:"",customer_id:"",supplier_id:"",product_id:"",quantity:"1",unit_price:"",
+      branch_id:"",customer_id:"",supplier_id:"",product_id:"",quantity:"1",unit_price:"",mpesa_reference:"",
       unit_cost:"",discount:"0",tax:"0",amount_paid:"",expense_date:new Date().toISOString().slice(0,10),
       starts_at:"",ends_at:"",service_id:"",staff_id:""
     });
@@ -119,6 +121,14 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
 
   useEffect(()=>{reset();},[reset]);
   useEffect(()=>{void load();},[load]);
+  useEffect(()=>{
+    let active=true;
+    fetch("/api/business/payment-settings?business_id="+encodeURIComponent(businessId),{cache:"no-store"})
+      .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||"Unable to load payment methods.");return data;})
+      .then(data=>{if(active)setPaymentAccounts((data.accounts??[]).filter((a:MpesaAccount)=>a.enabled));})
+      .catch(()=>{if(active)setPaymentAccounts([]);});
+    return ()=>{active=false;};
+  },[businessId]);
   const set = (key:string,value:string) => setForm(p=>({...p,[key]:value}));
   const notify = (s:string) => {setMessage(s);setError("");};
 
@@ -232,16 +242,28 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     try{
       if(!cart.length) throw new Error("Add at least one item before saving.");
       if(!form.branch_id) throw new Error("Select a branch.");
-      if(moduleName==="sales"&&form.payment_method==="mpesa"){
-        if(!form.phone.trim()) throw new Error("Enter the customer's M-Pesa phone number.");
+      if(moduleName==="sales"&&form.payment_method.startsWith("mpesa_")){
         if(!Number.isFinite(Number(form.discount||0))||!Number.isFinite(Number(form.tax||0))) throw new Error("Enter valid discount and tax amounts.");
-        const response=await fetch("/api/daraja/stk-push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-          branch_id:form.branch_id,customer_id:form.customer_id||null,items:cart,
-          discount:Number(form.discount||0),tax:Number(form.tax||0),notes:form.notes||null,phone_number:form.phone
-        })});
-        const payload=await response.json();
-        if(!response.ok) throw new Error(payload.error||"Unable to send the M-Pesa prompt.");
-        reset();notify("STK prompt sent for "+money(payload.amount)+". The sale will complete and stock will update only after Safaricom confirms payment.");await load();return;
+        const accountType=form.payment_method.replace("mpesa_","") as "paybill"|"till"|"pochi";
+        const account=paymentAccounts.find(a=>a.account_type===accountType);
+        const useStk=accountType==="paybill"&&!account ? true : Boolean(account?.credentials_configured);
+        if(useStk){
+          if(!form.phone.trim()) throw new Error("Enter the customer's M-Pesa phone number.");
+          const response=await fetch("/api/daraja/stk-push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+            account_type:accountType,branch_id:form.branch_id,customer_id:form.customer_id||null,items:cart,
+            discount:Number(form.discount||0),tax:Number(form.tax||0),notes:form.notes||null,phone_number:form.phone
+          })});
+          const payload=await response.json();
+          if(!response.ok) throw new Error(payload.error||"Unable to send the M-Pesa prompt.");
+          reset();notify("STK prompt sent for "+money(payload.amount)+". The sale will complete and stock will update only after Safaricom confirms payment.");await load();return;
+        }
+        if(!form.mpesa_reference.trim()) throw new Error("Enter the M-Pesa transaction code after verifying the payment in the business's M-Pesa account.");
+        const manualNotes=[form.notes||"", "Manual "+accountType+" payment reference: "+form.mpesa_reference.trim()].filter(Boolean).join(" · ");
+        const manualSale=await db.rpc("record_sale",{p_business_id:businessId,p_branch_id:form.branch_id,p_items:cart,p_customer_id:form.customer_id||null,p_payment_method:"mpesa",p_discount:Number(form.discount||0),p_tax:Number(form.tax||0),p_amount_paid:null,p_notes:manualNotes});
+        if(manualSale.error) throw manualSale.error;
+        const {error:referenceError}=await db.from("sales").update({mpesa_transaction_code:form.mpesa_reference.trim()}).eq("id",manualSale.data).eq("business_id",businessId);
+        if(referenceError) throw referenceError;
+        reset();notify("Manual M-Pesa payment recorded. The transaction reference was saved; ensure it matches the payment received in the business account.");await load();return;
       }
       let result:any;
       if(moduleName==="sales") result=await db.rpc("record_sale",{p_business_id:businessId,p_branch_id:form.branch_id,p_items:cart,p_customer_id:form.customer_id||null,p_payment_method:form.payment_method,p_discount:Number(form.discount||0),p_tax:Number(form.tax||0),p_amount_paid:form.amount_paid===""?null:Number(form.amount_paid),p_notes:form.notes||null});
@@ -281,7 +303,13 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     const received=form.amount_paid===""?total:Math.max(0,Number(form.amount_paid||0));
     const balance=Math.max(0,total-received);
     const change=Math.max(0,received-total);
-    const methods=[{value:"cash",label:"Cash",icon:"💵"},{value:"mpesa",label:"M-Pesa",icon:"📱"}];
+    const methods=[
+      {value:"cash",label:"Cash",icon:"💵"},
+      ...(paymentAccounts.length?paymentAccounts.map(a=>({value:"mpesa_"+a.account_type,label:a.account_type==="pochi"?"Pochi la Biashara":a.account_type==="till"?"M-Pesa Till":"M-Pesa PayBill",icon:a.account_type==="pochi"?"📲":"📱"})):[{value:"mpesa_paybill",label:"M-Pesa Sandbox",icon:"📱"}])
+    ];
+    const selectedMpesaType=form.payment_method.startsWith("mpesa_")?form.payment_method.replace("mpesa_",""):"";
+    const selectedMpesaAccount=paymentAccounts.find(a=>a.account_type===selectedMpesaType);
+    const selectedUsesStk=form.payment_method.startsWith("mpesa_")&&(selectedMpesaType==="paybill"&&!selectedMpesaAccount||Boolean(selectedMpesaAccount?.credentials_configured));
     if(!sale) return <form className="panel workspace-form" onSubmit={transact}>
       <div className="panelhead"><h2>Receive supplier purchase</h2><span className="pill">Stock intake</span></div>
       <div className="form-grid">
@@ -328,17 +356,23 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
         <aside className="pos-payment">
           <div className="pos-section-title"><div><h3>Payment</h3><p className="muted">Choose how the customer pays.</p></div></div>
           <div className="pos-method-grid">{methods.map(m=><button type="button" key={m.value} className={"pos-method "+(form.payment_method===m.value?"selected":"")} onClick={()=>set("payment_method",m.value)}><span>{m.icon}</span><b>{m.label}</b></button>)}</div>
-          {form.payment_method==="mpesa"&&<label className="field pos-mpesa-code"><span>Customer M-Pesa phone number</span><input type="tel" required value={form.phone??""} onChange={e=>set("phone",e.target.value)} placeholder="07XXXXXXXX or 2547XXXXXXXX"/><small>Digi Biashara will send an STK prompt. The customer approves it on their phone.</small></label>}
+          {form.payment_method.startsWith("mpesa_")&&selectedUsesStk&&<label className="field pos-mpesa-code"><span>Customer M-Pesa phone number</span><input type="tel" required value={form.phone??""} onChange={e=>set("phone",e.target.value)} placeholder="07XXXXXXXX or 2547XXXXXXXX"/><small>Digi Biashara will send an STK prompt using this business's own Daraja connection.</small></label>}
+          {form.payment_method.startsWith("mpesa_")&&!selectedUsesStk&&<div className="panel pos-mpesa-code">
+            <strong>{selectedMpesaType==="pochi"?"Pay using Pochi la Biashara":selectedMpesaType==="till"?"Pay using M-Pesa Till":"Pay using M-Pesa PayBill"}</strong>
+            <p className="muted">{selectedMpesaType==="pochi"?"Send the payment to business phone: "+(selectedMpesaAccount?.account_number??"not configured"):selectedMpesaType==="till"?"Till number: "+(selectedMpesaAccount?.account_number??"not configured"):"PayBill number: "+(selectedMpesaAccount?.account_number??"not configured")}</p>
+            <label className="field"><span>M-Pesa transaction code</span><input required value={form.mpesa_reference??""} onChange={e=>set("mpesa_reference",e.target.value.toUpperCase())} placeholder="e.g. QAB12CD34E"/></label>
+            <small>Verify that the payment has reached the business account before recording this sale. Manual payments are not automatically confirmed by Safaricom.</small>
+          </div>}
           <div className="pos-summary">
             <div className="pos-summary-line"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
             <label className="pos-adjustment"><span>Discount (KSh)</span><input aria-label="Discount in Kenya shillings" type="number" min="0" step="0.01" value={form.discount??"0"} onChange={e=>set("discount",e.target.value)}/></label>
             <label className="pos-adjustment"><span>Tax (KSh)</span><input aria-label="Tax in Kenya shillings" type="number" min="0" step="0.01" value={form.tax??"0"} onChange={e=>set("tax",e.target.value)}/></label>
             <div className="pos-grand-total"><span>Total due</span><strong>{money(total)}</strong></div>
             {form.payment_method==="cash"&&<><label className="pos-received"><span>Amount received (KSh)</span><input type="number" min="0" step="0.01" value={form.amount_paid??""} onChange={e=>set("amount_paid",e.target.value)} placeholder={money(total).replace("KSh ","")}/><small>Leave blank if the customer pays the full amount.</small></label><div className={"pos-payment-result "+(balance>0?"is-balance":"is-change")}><span>{balance>0?"Balance remaining":"Change to give"}</span><strong>{money(balance>0?balance:change)}</strong></div></>}
-            {form.payment_method==="mpesa"&&<div className="pos-payment-result"><span>Amount to request</span><strong>{money(total)}</strong></div>}
+            {form.payment_method.startsWith("mpesa_")&&<div className="pos-payment-result"><span>{selectedUsesStk?"Amount to request":"Amount to record"}</span><strong>{money(total)}</strong></div>}
           </div>
           <button className="btn pos-complete" disabled={saving||cart.length===0||!form.branch_id||total<=0||received<0||(form.payment_method==="mpesa"&&!form.phone.trim())}>{saving?"Processing…":form.payment_method==="mpesa"?"Send M-Pesa prompt  →":"Complete sale  →"}</button>
-          <p className="pos-secure-note">{form.payment_method==="mpesa"?"The sale stays pending and stock is unchanged until Safaricom confirms payment.":"Review the amount before completing. Stock updates when the sale is saved."}</p>
+          <p className="pos-secure-note">{form.payment_method.startsWith("mpesa_")?(selectedUsesStk?"The sale stays pending and stock is unchanged until Safaricom confirms payment.":"Manual payment must be checked in the business M-Pesa account before recording."): "Review the amount before completing. Stock updates when the sale is saved."}</p>
         </aside>
       </div>
     </form>;
