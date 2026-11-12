@@ -9,6 +9,7 @@ const items = [
   ["branches","Branches","/admin/branches"],
   ["catalog","Products & services","/admin/catalog"],
   ["sales","Sales / POS","/admin/sales"],
+  ["payments","Invoices & payments","/admin/payments"],
   ["inventory","Inventory","/admin/inventory"],
   ["purchases","Purchases","/admin/purchases"],
   ["expenses","Expenses","/admin/expenses"],
