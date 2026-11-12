@@ -258,11 +258,13 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
           reset();notify("STK prompt sent for "+money(payload.amount)+". The sale will complete and stock will update only after Safaricom confirms payment.");await load();return;
         }
         if(!form.mpesa_reference.trim()) throw new Error("Enter the M-Pesa transaction code after verifying the payment in the business's M-Pesa account.");
-        const manualNotes=[form.notes||"", "Manual "+accountType+" payment reference: "+form.mpesa_reference.trim()].filter(Boolean).join(" · ");
-        const manualSale=await db.rpc("record_sale",{p_business_id:businessId,p_branch_id:form.branch_id,p_items:cart,p_customer_id:form.customer_id||null,p_payment_method:"mpesa",p_discount:Number(form.discount||0),p_tax:Number(form.tax||0),p_amount_paid:null,p_notes:manualNotes});
-        if(manualSale.error) throw manualSale.error;
-        const {error:referenceError}=await db.from("sales").update({mpesa_transaction_code:form.mpesa_reference.trim()}).eq("id",manualSale.data).eq("business_id",businessId);
-        if(referenceError) throw referenceError;
+        const manualResponse=await fetch("/api/daraja/manual-sale",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+          business_id:businessId,branch_id:form.branch_id,items:cart,customer_id:form.customer_id||null,
+          discount:Number(form.discount||0),tax:Number(form.tax||0),notes:form.notes||null,
+          account_type:accountType,reference:form.mpesa_reference.trim()
+        })});
+        const manualPayload=await manualResponse.json();
+        if(!manualResponse.ok) throw new Error(manualPayload.error||"Unable to record the manual M-Pesa payment.");
         reset();notify("Manual M-Pesa payment recorded. The transaction reference was saved; ensure it matches the payment received in the business account.");await load();return;
       }
       let result:any;
