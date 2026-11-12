@@ -120,8 +120,8 @@ export async function POST(request: Request) {
       } else {
         if (!/^\d{4,7}$/.test(accountNumberRaw)) throw new Error("Enter a valid 4–7 digit Till number.");
         const storeCode = String(input.shortcode ?? "").trim();
-        if (!/^\d{4,7}$/.test(storeCode)) throw new Error("Enter the Till's Safaricom Store or Head Office shortcode.");
-        shortcode = storeCode;
+        if (storeCode && !/^\d{4,7}$/.test(storeCode)) throw new Error("Enter a valid optional Safaricom Store or Head Office shortcode.");
+        shortcode = storeCode || null;
         environment = input.environment === "production" ? "production" : "sandbox";
       }
 
