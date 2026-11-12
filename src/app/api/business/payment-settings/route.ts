@@ -25,7 +25,7 @@ function normaliseKenyanPhone(value: string) {
   return null;
 }
 
-async function getActor(businessId: string) {
+async function getActor(businessId: string, allowEmployeeRead = false) {
   const session = await createClient();
   const { data: { user }, error } = await session.auth.getUser();
   if (error || !user) return { response: NextResponse.json({ error: "Please sign in again." }, { status: 401 }) };
@@ -36,7 +36,8 @@ async function getActor(businessId: string) {
   ]);
   const isPlatformAdmin = platformRole?.role === "super_admin";
   const isOwner = membership?.role === "owner";
-  if (!isPlatformAdmin && !isOwner) {
+  const isAllowedMemberRead = allowEmployeeRead && Boolean(membership);
+  if (!isPlatformAdmin && !isOwner && !isAllowedMemberRead) {
     return { response: NextResponse.json({ error: "Only the business owner or Digi Biashara platform administrator can manage payment settings." }, { status: 403 }) };
   }
   return { session, user, isPlatformAdmin, isOwner };
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
   try {
     const businessId = new URL(request.url).searchParams.get("business_id") ?? "";
     if (!businessId) return NextResponse.json({ error: "Business ID is required." }, { status: 400 });
-    const actor = await getActor(businessId);
+    const actor = await getActor(businessId, true);
     if ("response" in actor) return actor.response;
 
     const admin = createAdminClient();
