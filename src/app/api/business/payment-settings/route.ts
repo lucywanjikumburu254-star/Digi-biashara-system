@@ -104,6 +104,9 @@ export async function POST(request: Request) {
       const enabled = Boolean(input.enabled);
       if (!accountNumberRaw) {
         if (enabled) throw new Error("Enter the account number for every enabled payment method.");
+        const { error: deleteError } = await admin.from("business_mpesa_accounts")
+          .delete().eq("business_id", businessId).eq("account_type", type);
+        if (deleteError) throw deleteError;
         continue;
       }
       let accountNumber = accountNumberRaw;
