@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +16,17 @@ export async function POST(request: Request) {
     const branchId = String(body.branch_id ?? "");
     const reference = String(body.reference ?? "").trim().toUpperCase();
     if (!businessId || !branchId) return NextResponse.json({ error: "Business and branch are required." }, { status: 400 });
+    const accountType = String(body.account_type ?? "");
+    if (!["paybill", "till", "pochi"].includes(accountType)) {
+      return NextResponse.json({ error: "Choose a valid M-Pesa payment method." }, { status: 400 });
+    }
+    const admin = createAdminClient();
+    const { data: enabledAccount, error: accountError } = await admin.from("business_mpesa_accounts")
+      .select("account_type").eq("business_id", businessId).eq("account_type", accountType).eq("enabled", true).maybeSingle();
+    if (accountError) throw accountError;
+    if (!enabledAccount) {
+      return NextResponse.json({ error: "This M-Pesa payment method is not enabled for this business. Ask the owner to configure it in Settings → Payments." }, { status: 400 });
+    }
     if (!/^[A-Z0-9]{6,20}$/.test(reference)) return NextResponse.json({ error: "Enter a valid M-Pesa transaction code (6–20 letters or numbers)." }, { status: 400 });
 
     const { data: memberships, error: membershipError } = await session.from("business_memberships")
@@ -31,7 +43,7 @@ export async function POST(request: Request) {
       p_discount: Number(body.discount || 0),
       p_tax: Number(body.tax || 0),
       p_notes: String(body.notes ?? "").trim() || null,
-      p_account_type: String(body.account_type ?? ""),
+      p_account_type: accountType,
       p_reference: reference,
     });
     if (saleError || !saleId) throw new Error(saleError?.message || "Unable to save the M-Pesa sale and transaction code.");
