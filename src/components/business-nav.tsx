@@ -18,7 +18,6 @@ const items = [
   ["staff","Staff","/admin/staff"],
   ["appointments","Appointments","/admin/appointments"],
   ["reports","Reports","/admin/reports"],
-  ["billing","Billing & subscription","/admin/billing"],
 ] as const;
 
 export default function BusinessNav({active}:{active:string}) {
@@ -31,8 +30,9 @@ export default function BusinessNav({active}:{active:string}) {
     <aside className={"side nav-drawer "+(open?"nav-drawer-open":"")} aria-hidden={!open}>
       <div className="drawer-head"><BrandLogo /><button type="button" className="drawer-close" onClick={()=>setOpen(false)} aria-label="Close menu">×</button></div>
       <div className="sidetitle">Business workspace</div>
-      {items.slice(0,13).map(([key,label,url])=><Link key={key} tabIndex={open?0:-1} className={"navlink "+(active===key?"active":"")} href={url} onClick={()=>setOpen(false)}>{label}</Link>)}
+      {items.map(([key,label,url])=><Link key={key} tabIndex={open?0:-1} className={"navlink "+(active===key?"active":"")} href={url} onClick={()=>setOpen(false)}>{label}</Link>)}
       <div className="sidetitle">Account</div>
+      <Link tabIndex={open?0:-1} className={"navlink "+(active==="payment-settings"?"active":"")} href="/admin/payment-settings" onClick={()=>setOpen(false)}>Payment methods</Link>
       <Link tabIndex={open?0:-1} className={"navlink "+(active==="billing"?"active":"")} href="/admin/billing" onClick={()=>setOpen(false)}>Billing & subscription</Link>
       <form action="/logout" method="post"><button tabIndex={open?0:-1} type="submit" className="navlink" style={{width:"100%",textAlign:"left",border:0,background:"transparent",cursor:"pointer",font:"inherit"}}>Sign out</button></form>
     </aside>
