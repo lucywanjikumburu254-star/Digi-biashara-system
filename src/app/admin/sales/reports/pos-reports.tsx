@@ -129,7 +129,8 @@ export default function PosReports({ businessId, businessName, role, assignedBra
   const mpesaRows = paymentRows.filter((p) => p.method === "mpesa" && (p.reference || p.status));
   const incoming = (rows: Row[]) => rows.filter((r) => r.direction === "in" && ["confirmed", "recorded"].includes(r.status)).reduce((sum, r) => sum + r.amount, 0);
   const outgoing = (rows: Row[]) => rows.filter((r) => r.direction === "out" || ["refunded", "reversed"].includes(r.status)).reduce((sum, r) => sum + r.amount, 0);
-  const methodTotals = paymentRows.filter((p) => p.direction === "in" && ["confirmed", "recorded"].includes(p.status)).reduce((map, p) => map.set(p.method, (map.get(p.method) ?? 0) + p.amount), new Map<string, number>());
+  const methodTotals: Map<string, number> = paymentRows.filter((p) => p.direction === "in" && ["confirmed", "recorded"].includes(p.status)).reduce((map: Map<string, number>, p: Row) => map.set(p.method, (map.get(p.method) ?? 0) + p.amount), new Map<string, number>());
+  const methodSummary: Array<[string, number]> = Array.from(methodTotals.entries());
 
   function downloadPdf() { window.print(); }
   const reportTitle = report === "daily-sales" ? "Daily Sales Report" : report === "weekly-sales" ? "Weekly Sales Report" : report === "daily-payments" ? "Daily Payments Report" : report === "weekly-payments" ? "Weekly Payments Report" : report === "products" ? "Daily Products Sold Report" : report === "weekly-products" ? "Weekly Products Sold Report" : report === "services" ? "Daily Services Sold Report" : report === "weekly-services" ? "Weekly Services Sold Report" : "M-Pesa Statement";
@@ -164,7 +165,7 @@ export default function PosReports({ businessId, businessName, role, assignedBra
         </> : null}
         {report === "daily-payments" || report === "weekly-payments" ? <>
           <div className="pos-report-stats"><div><small>Payments received</small><strong>{money(incoming(paymentRows))}</strong></div><div><small>Payments / refunds out</small><strong>{money(outgoing(paymentRows))}</strong></div><div><small>Transactions</small><strong>{paymentRows.length}</strong></div><div><small>M-Pesa received</small><strong>{money(methodTotals.get("mpesa") ?? 0)}</strong></div></div>
-          <h2>Payment method summary</h2><table className="table"><thead><tr><th>Method</th><th>Amount received</th></tr></thead><tbody>{Array.from(methodTotals.entries()).map(([method, amount]) => <tr key={method}><td>{method.toUpperCase()}</td><td>{money(amount)}</td></tr>)}</tbody></table>
+          <h2>Payment method summary</h2><table className="table"><thead><tr><th>Method</th><th>Amount received</th></tr></thead><tbody>{methodSummary.map(([method, amount]) => <tr key={method}><td>{method.toUpperCase()}</td><td>{money(amount)}</td></tr>)}</tbody></table>
           <h2>Payment transactions</h2><table className="table"><thead><tr><th>Date & time</th><th>Method</th><th>Reference</th><th>Source</th><th>Cashier / recorder</th><th>Status</th><th>Amount</th></tr></thead><tbody>{paymentRows.map((p) => <tr key={p.id}><td>{new Date(p.date).toLocaleString("en-KE", { timeZone: "Africa/Nairobi" })}</td><td>{p.method.toUpperCase()}</td><td>{p.reference || "—"}</td><td>{p.source}</td><td>{cashierName(p.created_by)}</td><td>{p.status}</td><td>{money(p.amount)}</td></tr>)}</tbody></table>
         </> : null}
         {report === "products" || report === "weekly-products" || report === "services" || report === "weekly-services" ? <>
