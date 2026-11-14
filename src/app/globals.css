@@ -431,3 +431,32 @@ input,select,textarea,button{touch-action:manipulation}
 .employee-brand-logo img{display:block;width:170px;height:58px;object-fit:contain;object-position:left center}
 @media(max-width:760px){.employee-brand-logo img{width:142px;height:49px}}
 @media(max-width:380px){.employee-brand-logo img{width:128px;height:44px}}
+
+
+/* Branch management centre */
+.branch-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 18px;margin:0 0 16px;border:1px solid #e2eaf8;border-radius:14px;background:#fff}
+.branch-toolbar p{margin:4px 0 0;font-size:12px}
+.branch-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.branch-card{margin:0;min-width:0}
+.branch-card .panelhead{align-items:flex-start}
+.branch-card .panelhead h2{margin:0 0 5px;font-size:17px}
+.branch-card .panelhead p{margin:0;font-size:12px}
+.branch-card-meta{display:grid;gap:6px;padding:12px 0;color:#637493;font-size:12px}
+.branch-detail{margin-top:18px;scroll-margin-top:18px}
+.branch-detail .panelhead h2{margin:3px 0;font-size:20px}
+.branch-stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:16px 0}
+.branch-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+.branch-detail-grid>div{padding:14px;border:1px solid #e7edf8;border-radius:12px;background:#f8faff}
+.branch-detail-grid strong{color:#17366f;font-size:13px}
+.branch-detail-grid p{margin:5px 0 0;font-size:11px;line-height:1.5}
+@media(max-width:640px){
+ .branch-toolbar{align-items:stretch;flex-direction:column}
+ .branch-toolbar .btn{width:100%}
+ .branch-card-grid{grid-template-columns:minmax(0,1fr)}
+ .branch-detail-grid{grid-template-columns:minmax(0,1fr)}
+ .branch-card .row-actions{flex-wrap:wrap}
+ .branch-card .row-actions .btn{flex:1}
+ .branch-detail .panelhead{align-items:flex-start;flex-direction:column}
+ .branch-detail .panelhead .btn{width:100%}
+ .branch-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
