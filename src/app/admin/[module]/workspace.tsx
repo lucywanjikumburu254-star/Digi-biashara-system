@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import BusinessNav from "@/components/business-nav";
 import SubscriptionReminderPopup from "@/components/subscription-reminder-popup";
+import BusinessSuspensionGuard from "@/components/business-suspension-guard";
 import ProductScanner from "./product-scanner";
 
 type ModuleName = "branches" | "catalog" | "customers" | "suppliers" | "sales" | "inventory" | "purchases" | "expenses" | "staff" | "appointments" | "reports";
@@ -459,7 +460,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     return <><div className="stats"><div className="stat"><span>Recorded sales</span><strong>{(r.sales??[]).length}</strong><small>{money(revenue)} total</small></div><div className="stat"><span>Today's sales</span><strong>{money(todaySales)}</strong></div><div className="stat"><span>Recorded expenses</span><strong>{money(cost)}</strong></div><div className="stat"><span>Stock purchases</span><strong>{money(purchases)}</strong></div></div><div className="panel"><h2>Cash movement summary</h2><p className="muted">Sales less recorded expenses and stock purchases. This is a management summary, not a statutory profit statement.</p><div className="report-net">{money(revenue-cost-purchases)}</div><small className="muted">Sales − expenses − purchases</small></div></>;
   }
 
-  return <div className="layout"><SubscriptionReminderPopup businessId={businessId} businessName={businessName}/><BusinessNav active={moduleName}/><main className="main"><header className="dashhead"><strong>{businessName}</strong><span className="muted">{categoryName}</span></header><section className="dashcontent">
+  return <BusinessSuspensionGuard businessId={businessId} businessName={businessName} audience="owner"><div className="layout"><SubscriptionReminderPopup businessId={businessId} businessName={businessName}/><BusinessNav active={moduleName}/><main className="main"><header className="dashhead"><strong>{businessName}</strong><span className="muted">{categoryName}</span></header><section className="dashcontent">
     <div className="eyebrow">{categoryName} workspace</div><h1>{TITLES[moduleName]}</h1><p className="sub">{DESCRIPTIONS[moduleName]}</p>
     {message&&<div className="success">{message}</div>}{error&&<div className="error" role="alert">{error}</div>}
     {moduleName==="branches"&&<div className="branch-toolbar">
@@ -501,5 +502,5 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     </div>
     {moduleName==="inventory"&&<div className="panel"><h2>Stock tracking</h2><p className="muted">Sales reduce stock, received purchases increase stock, and manual adjustments create an auditable movement. Add stocked products in Products & services first.</p></div>}
     {moduleName==="staff"&&<div className="panel"><h2>Employee access rules</h2><p className="muted">Each employee signs in with the email and password set by the owner. Their workspace is limited to Sales / POS and their assigned branch. Deactivating a staff member also disables their business membership.</p></div>}
-  </section></main></div>;
+  </section></main></div></BusinessSuspensionGuard>;
 }
