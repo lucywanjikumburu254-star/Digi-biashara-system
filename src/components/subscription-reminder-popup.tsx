@@ -41,10 +41,10 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
       const nextStage = reminderStage(days);
       if (!nextStage) return;
 
-      const storageKey = `db-subscription-reminder:${businessId}:${nextStage}`;
+      const storageKey = `db-subscription-reminder:${businessId}:${due.toISOString()}:${nextStage}`;
       try {
-        if (window.sessionStorage.getItem(storageKey) === "shown") return;
-        window.sessionStorage.setItem(storageKey, "shown");
+        if (window.localStorage.getItem(storageKey) === "shown") return;
+        window.localStorage.setItem(storageKey, "shown");
       } catch {
         // The reminder remains available for this visit if browser storage is disabled.
       }
