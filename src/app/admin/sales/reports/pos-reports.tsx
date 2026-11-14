@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import BusinessNav from "@/components/business-nav";
 import { createClient } from "@/lib/supabase/client";
 
 type Row = Record<string, any>;
@@ -17,7 +18,7 @@ const labelDate = (date: string) => new Date(date + "T12:00:00Z").toLocaleDateSt
 export default function PosReports({ businessId, businessName, role, assignedBranchId }: { businessId: string; businessName: string; role: string; assignedBranchId: string | null }) {
   const db = useMemo(() => createClient(), []);
   const [branches, setBranches] = useState<Row[]>([]);
-  const [branchId, setBranchId] = useState(assignedBranchId ?? "all");
+  const [branchId, setBranchId] = useState(assignedBranchId ?? (role === "owner" || role === "super_admin" ? "all" : "none"));
   const [report, setReport] = useState<ReportType>("daily-sales");
   const [selectedDate, setSelectedDate] = useState(nairobiDate());
   const [customStart, setCustomStart] = useState(nairobiDate());
@@ -135,7 +136,7 @@ export default function PosReports({ businessId, businessName, role, assignedBra
   const periodText = range.from === range.to ? labelDate(range.from) : labelDate(range.from) + " – " + labelDate(range.to);
   const selectedRows = report === "mpesa" ? mpesaRows : paymentRows;
 
-  return <div className="pos-report-page">
+  return <div className="layout"><BusinessNav active="sales-reports"/><main className="main"><div className="pos-report-page">
     <div className="pos-report-toolbar no-print">
       <Link className="btn secondary small" href="/admin/sales">← Back to POS</Link>
       <div className="pos-report-actions"><button className="btn secondary" type="button" onClick={() => void load()} disabled={loading}>Refresh</button><button className="btn" type="button" onClick={downloadPdf} disabled={loading}>Download PDF / Print</button></div>
@@ -145,7 +146,7 @@ export default function PosReports({ businessId, businessName, role, assignedBra
       <div className="form-grid">
         <label className="field"><span>Report type</span><select value={report} onChange={(e) => { setReport(e.target.value as ReportType); setCustomRange(false); }}><option value="daily-sales">Daily sales</option><option value="weekly-sales">Weekly sales (Monday–Sunday)</option><option value="daily-payments">Daily payments</option><option value="weekly-payments">Weekly payments (Monday–Sunday)</option><option value="products">Products sold</option><option value="services">Services sold</option><option value="mpesa">M-Pesa statement (all recorded M-Pesa)</option></select></label>
         <label className="field"><span>Selected date</span><input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} /></label>
-        <label className="field"><span>Branch</span><select value={branchId} onChange={(e) => setBranchId(e.target.value)} disabled={!isOwner && !!assignedBranchId}><option value="all">All branches</option>{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+        <label className="field"><span>Branch</span><select value={branchId} onChange={(e) => setBranchId(e.target.value)} disabled={!isOwner}>{isOwner && <option value="all">All branches</option>}{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
         <label className="field"><span>Custom date range</span><div style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={customRange} onChange={(e) => setCustomRange(e.target.checked)} /><span>Use custom dates</span></div></label>
         {customRange && <><label className="field"><span>From</span><input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} /></label><label className="field"><span>To</span><input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} /></label></>}
       </div>
@@ -203,5 +204,5 @@ export default function PosReports({ businessId, businessName, role, assignedBra
       .pos-report-footer { border-top:1px solid #ddd; margin-top:24px; padding-top:10px; font-size:10px; text-align:center; color:#666; }
       @media(max-width:760px) { .pos-report-page { padding:12px; } .pos-report-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .pos-report-toolbar { flex-wrap:wrap; } }
     `}</style>
-  </div>;
+  </div></main></div>;
 }
