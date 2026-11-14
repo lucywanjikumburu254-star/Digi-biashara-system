@@ -28,7 +28,8 @@ export async function POST(request: Request) {
     const allowed = memberships.some((m: any) => m.role === "owner" || (m.role === "employee" && m.branch_id === branchId && m.permissions?.sales === true));
     const { data: businessAccess, error: accessError } = await session.from("businesses")
       .select("status,subscription:business_subscriptions(status)").eq("id", businessId).maybeSingle();
-    const subscriptionAccess: any = Array.isArray((businessAccess as any)?.subscription) ? (businessAccess as any).subscription[0] : (businessAccess as any)?.subscription;\n    if (accessError || !businessAccess || businessAccess.status !== "active" || ["suspended", "cancelled"].includes(subscriptionAccess?.status)) {
+    const subscriptionAccess: any = Array.isArray((businessAccess as any)?.subscription) ? (businessAccess as any).subscription[0] : (businessAccess as any)?.subscription;
+    if (accessError || !businessAccess || businessAccess.status !== "active" || ["suspended", "cancelled"].includes(subscriptionAccess?.status)) {
       return NextResponse.json({ error: "This business workspace is suspended. Complete subscription payment before recording sales." }, { status: 423 });
     }
     if (!allowed) return NextResponse.json({ error: "You do not have permission to record sales for this branch." }, { status: 403 });
