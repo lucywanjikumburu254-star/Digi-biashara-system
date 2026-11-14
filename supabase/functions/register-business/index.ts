@@ -36,12 +36,43 @@ Deno.serve(async (req) => {
 
     if (password) {
       if (password.length < 8) throw new Error("Password must contain at least 8 characters.");
-      const { data, error } = await admin.auth.admin.createUser({
-        email, password, email_confirm: true,
-        user_metadata: { full_name: String(body.full_name ?? ""), phone: String(body.phone ?? "") },
-      });
-      if (!error && data.user) createdUserId = data.user.id;
-      else if (!/already|registered|exists|duplicate/i.test(error?.message ?? "")) throw error;
+      if (mode === "agent_account") {
+        const { data: listed, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        if (listError) throw listError;
+        const existing = listed.users.find((candidate) => (candidate.email ?? "").toLowerCase() === email);
+        if (existing) {
+          const { data: existingRole, error: existingRoleError } = await admin
+            .from("platform_roles").select("role").eq("user_id", existing.id).maybeSingle();
+          if (existingRoleError) throw existingRoleError;
+          if (existingRole && existingRole.role !== "agent") {
+            throw new Error("This email already belongs to another platform role. Use a dedicated agent email.");
+          }
+          const { data: ownerMembership, error: ownerError } = await admin
+            .from("business_memberships").select("id").eq("user_id", existing.id)
+            .eq("role", "owner").eq("status", "active").limit(1).maybeSingle();
+          if (ownerError) throw ownerError;
+          if (ownerMembership) throw new Error("This email already owns a business and cannot be converted into an agent-only login.");
+          const { error: updateError } = await admin.auth.admin.updateUserById(existing.id, {
+            password, email_confirm: true,
+            user_metadata: { ...(existing.user_metadata ?? {}), full_name: String(body.full_name ?? ""), phone: String(body.phone ?? "") },
+          });
+          if (updateError) throw updateError;
+        } else {
+          const { data, error } = await admin.auth.admin.createUser({
+            email, password, email_confirm: true,
+            user_metadata: { full_name: String(body.full_name ?? ""), phone: String(body.phone ?? "") },
+          });
+          if (error || !data.user) throw error ?? new Error("Unable to create the agent login.");
+          createdUserId = data.user.id;
+        }
+      } else {
+        const { data, error } = await admin.auth.admin.createUser({
+          email, password, email_confirm: true,
+          user_metadata: { full_name: String(body.full_name ?? ""), phone: String(body.phone ?? "") },
+        });
+        if (!error && data.user) createdUserId = data.user.id;
+        else if (!/already|registered|exists|duplicate/i.test(error?.message ?? "")) throw error;
+      }
     }
 
     let result: string | null = null;
