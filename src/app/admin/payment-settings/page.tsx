@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PaymentSettingsForm from "./payment-settings-form";
+import BusinessSuspensionGuard from "@/components/business-suspension-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -15,5 +16,5 @@ export default async function PaymentSettingsPage() {
   const { data: business } = await supabase.from("businesses")
     .select("name,status").eq("id", membership.business_id).maybeSingle();
   if (!business || business.status !== "active") redirect("/admin/dashboard");
-  return <PaymentSettingsForm businessId={membership.business_id} businessName={business.name} />;
+  return <BusinessSuspensionGuard businessId={membership.business_id} businessName={business.name} audience="owner"><PaymentSettingsForm businessId={membership.business_id} businessName={business.name} /></BusinessSuspensionGuard>;
 }
