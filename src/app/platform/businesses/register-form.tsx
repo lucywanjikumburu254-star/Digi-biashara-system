@@ -13,6 +13,7 @@ export default function RegisterBusinessForm({groups,categories,agents}:{groups:
  const [business,setBusiness]=useState("");
  const [group,setGroup]=useState("");
  const [category,setCategory]=useState("");
+ const [categoryIds,setCategoryIds]=useState<string[]>([]);
  const [location,setLocation]=useState("");
  const [phone,setPhone]=useState("");
  const [agent,setAgent]=useState("");
@@ -52,7 +53,7 @@ export default function RegisterBusinessForm({groups,categories,agents}:{groups:
    const s=createClient();
    const {data,error}=await s.functions.invoke("register-business",{body:{
     mode:"platform_business",email:ownerEmail,password:ownerPassword,full_name:ownerName,
-    business_name:business,category_id:category,location,phone,agent_user_id:agent,monthly_fee:Number(fee)
+    business_name:business,category_id:categoryIds[0]||category,category_ids:categoryIds.length?categoryIds:[category],location,phone,agent_user_id:agent,monthly_fee:Number(fee)
    }});
    if(error)throw error;
    if(data?.error)throw new Error(data.error);
@@ -70,7 +71,7 @@ export default function RegisterBusinessForm({groups,categories,agents}:{groups:
     else paymentMessage="Business payment details saved securely.";
    }
    setMessage("Business created. Business ID: "+data.id+(data.account_created?" Owner login created.":" Existing owner login linked.")+" "+paymentMessage);
-   setOwnerEmail("");setOwnerPassword("");setOwnerName("");setBusiness("");setGroup("");setCategory("");setLocation("");setPhone("");setAgent("");
+   setOwnerEmail("");setOwnerPassword("");setOwnerName("");setBusiness("");setGroup("");setCategory("");setCategoryIds([]);setLocation("");setPhone("");setAgent("");
    setPaybillEnabled(false);setPaybill("");setPaybillKey("");setPaybillSecret("");setPaybillPasskey("");
    setTillEnabled(false);setTill("");setTillShortcode("");setTillKey("");setTillSecret("");setTillPasskey("");
    setPochiEnabled(false);setPochiPhone("");setAuthorised(false);
@@ -87,8 +88,7 @@ export default function RegisterBusinessForm({groups,categories,agents}:{groups:
    <div className="field"><label>Owner password (only for a new login)</label><input type="password" minLength={8} value={ownerPassword} onChange={e=>setOwnerPassword(e.target.value)} placeholder="Ask the owner to enter their password"/></div>
    <div className="field"><label>Owner full name</label><input required value={ownerName} onChange={e=>setOwnerName(e.target.value)}/></div>
    <div className="field"><label>Business name</label><input required value={business} onChange={e=>setBusiness(e.target.value)}/></div>
-   <div className="field"><label>Business group</label><select required value={group} onChange={e=>{setGroup(e.target.value);setCategory("");}}><option value="">Select group</option>{groups.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></div>
-   <div className="field"><label>Business category</label><select required value={category} onChange={e=>setCategory(e.target.value)} disabled={!group}><option value="">Select category</option>{categories.filter(x=>x.group_id===group).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></div>
+   <div className="field" style={{gridColumn:"1 / -1"}}><label>Business categories (select all that apply)</label><div style={{maxHeight:230,overflowY:"auto",border:"1px solid #dbe4f0",borderRadius:10,padding:12,display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:8}}>{categories.map(x=><label key={x.id} style={{display:"flex",gap:8,alignItems:"center",fontWeight:500}}><input type="checkbox" checked={categoryIds.includes(x.id)} onChange={e=>{const next=e.target.checked?[...categoryIds,x.id]:categoryIds.filter(id=>id!==x.id);setCategoryIds(next);setCategory(next[0]||"");}}/>{x.name}</label>)}</div><small className="muted">The first selected category is the primary category.</small></div>
    <div className="field"><label>Town / location</label><input value={location} onChange={e=>setLocation(e.target.value)} placeholder="e.g. Gilgil"/></div>
    <div className="field"><label>Business phone</label><input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="07XXXXXXXX"/></div>
    <div className="field"><label>Agent attribution (optional)</label><select value={agent} onChange={e=>setAgent(e.target.value)}><option value="">Direct registration</option>{agents.map(x=><option key={x.user_id} value={x.user_id}>{x.full_name} · {x.agent_code}</option>)}</select></div>
