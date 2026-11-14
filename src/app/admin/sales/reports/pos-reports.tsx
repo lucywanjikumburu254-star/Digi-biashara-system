@@ -20,6 +20,7 @@ export default function PosReports({ businessId, businessName, role, assignedBra
   const db = useMemo(() => createClient(), []);
   const [branches, setBranches] = useState<Row[]>([]);
   const [branchId, setBranchId] = useState(assignedBranchId ?? (role === "owner" || role === "super_admin" ? "all" : "none"));
+  const [period, setPeriod] = useState<"daily" | "weekly">("daily");
   const [selectedDate, setSelectedDate] = useState(nairobiDate());
   const [customStart, setCustomStart] = useState(nairobiDate());
   const [customEnd, setCustomEnd] = useState(nairobiDate());
@@ -38,8 +39,8 @@ export default function PosReports({ businessId, businessName, role, assignedBra
   const isOwner = role === "owner" || role === "super_admin";
   const range = useMemo(() => customRange
     ? { from: customStart, to: customEnd }
-    : { from: mondayOf(selectedDate), to: plusDays(mondayOf(selectedDate), 6) },
-  [customRange, customStart, customEnd, selectedDate]);
+    : period === "weekly" ? { from: mondayOf(selectedDate), to: plusDays(mondayOf(selectedDate), 6) } : { from: selectedDate, to: selectedDate },
+  [customRange, customStart, customEnd, selectedDate, period]);
 
   useEffect(() => {
     const now = new Date();
@@ -160,13 +161,14 @@ export default function PosReports({ businessId, businessName, role, assignedBra
     <section className="panel no-print">
       <div className="panelhead"><div><div className="eyebrow">Sales / POS</div><h1>Complete business report</h1><p className="muted">One report containing sales, products, services, individual receipts and all recorded payments.</p></div></div>
       <div className="form-grid">
-        <label className="field"><span>Reporting date (weekly: Monday–Sunday)</span><input type="date" value={selectedDate} onChange={(e) => { setSelectedDate(e.target.value); setCustomRange(false); }} /></label>
+        <label className="field"><span>Report period</span><select value={period} onChange={(e) => { setPeriod(e.target.value as "daily" | "weekly"); setCustomRange(false); }}><option value="daily">Daily report</option><option value="weekly">Weekly report (Monday–Sunday)</option></select></label>
+        <label className="field"><span>Reporting date</span><input type="date" value={selectedDate} onChange={(e) => { setSelectedDate(e.target.value); setCustomRange(false); }} /></label>
         <label className="field"><span>Branch</span><select value={branchId} onChange={(e) => setBranchId(e.target.value)} disabled={!isOwner}>{isOwner && <option value="all">All branches</option>}{branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
         <label className="field"><span>Custom date range</span><div style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={customRange} onChange={(e) => setCustomRange(e.target.checked)} /><span>Use custom dates</span></div></label>
         {customRange && <><label className="field"><span>From</span><input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} /></label><label className="field"><span>To</span><input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} /></label></>}
       </div>
       {!isOwner && <p className="muted">Your report is limited to your assigned branch.</p>}
-      <p className="muted">The report automatically covers the selected Monday–Sunday week, or your custom date range. All dates and times use East Africa Time (Nairobi).</p>
+      <p className="muted">The complete report covers the selected day, Monday–Sunday week, or your custom date range. All dates and times use East Africa Time (Nairobi).</p>
       {error && <div className="error" role="alert">{error}</div>}
     </section>
 
