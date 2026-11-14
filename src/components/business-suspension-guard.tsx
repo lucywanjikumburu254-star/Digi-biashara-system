@@ -19,12 +19,11 @@ export default function BusinessSuspensionGuard({ businessId, businessName, audi
         db.from("business_subscriptions").select("status").eq("business_id", businessId).maybeSingle(),
       ]);
       if (!active) return;
-      if (!businessResult.error && businessResult.data && businessResult.data.status !== "active") {
-        setSuspended(true);
-      }
-      if (!subscriptionResult.error && subscriptionResult.data &&
-        ["suspended", "cancelled"].includes(subscriptionResult.data.status)) {
-        setSuspended(true);
+      if (!businessResult.error && !subscriptionResult.error) {
+        const businessBlocked = !!businessResult.data && businessResult.data.status !== "active";
+        const subscriptionBlocked = !!subscriptionResult.data &&
+          ["suspended", "cancelled"].includes(subscriptionResult.data.status);
+        setSuspended(businessBlocked || subscriptionBlocked);
       }
       setChecking(false);
     };
@@ -33,10 +32,10 @@ export default function BusinessSuspensionGuard({ businessId, businessName, audi
     const interval = window.setInterval(() => void check(), 5_000);
     const channel = db.channel(`business-access-${businessId}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "businesses", filter: `id=eq.${businessId}` }, payload => {
-        if ((payload.new as { status?: string }).status !== "active") setSuspended(true);
+        void check();
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "business_subscriptions", filter: `business_id=eq.${businessId}` }, payload => {
-        if (["suspended", "cancelled"].includes(String((payload.new as { status?: string }).status))) setSuspended(true);
+        void check();
       })
       .subscribe();
 
