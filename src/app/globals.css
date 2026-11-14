@@ -581,3 +581,71 @@ html,body{background:#f3f6ff;color:#10204b}
   .db-nav{border-top-color:#e1eaff}
 }
 @media(prefers-reduced-motion:reduce){.db-home *,.db-home *:before,.db-home *:after{animation:none!important;transition:none!important}}
+
+
+/* Mobile compatibility pass — owner, agent, platform and staff workspaces */
+@media(max-width:760px){
+  /* Agent and platform use a compact, wrapping navigation bar on phones.
+     The owner workspace keeps its existing slide-out drawer. */
+  .layout > .side:not(.nav-drawer){
+    display:flex;flex-wrap:wrap;align-items:center;align-content:flex-start;
+    gap:6px 8px;width:100%;height:auto;min-height:0;max-height:none;
+    position:relative;top:auto;overflow:visible;padding:12px 12px 10px;
+  }
+  .layout > .side:not(.nav-drawer) .brand-logo{padding:0 5px 4px;flex:0 0 auto}
+  .layout > .side:not(.nav-drawer) .brand-logo img{width:132px;height:46px}
+  .layout > .side:not(.nav-drawer) .sidetitle{
+    flex:0 0 100%;width:100%;padding:7px 5px 2px;margin:0;
+  }
+  .layout > .side:not(.nav-drawer) .navlink{
+    display:inline-flex;align-items:center;justify-content:center;
+    flex:0 0 auto;width:auto;max-width:100%;white-space:nowrap;
+    margin:0;padding:9px 11px;font-size:12px;
+  }
+  .layout > .side:not(.nav-drawer) form{margin:0;flex:0 0 auto}
+  .layout > .side:not(.nav-drawer) form .navlink{width:auto!important}
+  .layout > .side:not(.nav-drawer) + .main .dashhead{
+    padding-left:16px;padding-right:14px;min-height:60px;height:auto;
+  }
+  .layout > .side:not(.nav-drawer) + .main .dashhead strong{
+    min-width:0;overflow-wrap:anywhere;
+  }
+  .layout > .side:not(.nav-drawer) + .main .dashhead span{
+    min-width:0;overflow-wrap:anywhere;text-align:right;
+  }
+  .dashcontent{min-width:0;width:100%;padding:16px 12px 30px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .stat{min-width:0}
+  .stat strong{overflow-wrap:anywhere}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .card{min-width:0;overflow-wrap:anywhere}
+  .panel,.panelhead,.panelhead>div{min-width:0}
+  .panelhead{align-items:flex-start;flex-wrap:wrap}
+  .panelhead>*{max-width:100%}
+  .table{min-width:620px}
+  .table-wrap{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+  .form-actions{gap:8px}
+  .form-actions .btn{min-height:44px}
+  .row-actions{flex-wrap:wrap}
+  .row-actions .btn{min-height:42px}
+  .employee-dashboard{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+  input,select,textarea{font-size:16px}
+}
+@media(max-width:420px){
+  .layout > .side:not(.nav-drawer){padding:10px 9px}
+  .layout > .side:not(.nav-drawer) .navlink{font-size:11px;padding:8px 9px}
+  .dashcontent{padding-left:10px;padding-right:10px}
+  .cards{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .panel{padding:12px}
+  .panelhead .btn{max-width:100%}
+  .employee-panel-heading{flex-wrap:wrap}
+  .employee-panel-heading>*{max-width:100%}
+  .employee-sale-right{min-width:0}
+}
+@media(max-width:350px){
+  .stats{grid-template-columns:1fr}
+  .employee-quick-actions,.employee-summary-grid{grid-template-columns:1fr 1fr}
+  .employee-sale-row{grid-template-columns:26px minmax(0,1fr);gap:7px}
+  .employee-sale-right{grid-column:2;justify-items:start;text-align:left}
+}
