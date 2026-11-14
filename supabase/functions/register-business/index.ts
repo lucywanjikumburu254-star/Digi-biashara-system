@@ -104,6 +104,17 @@ Deno.serve(async (req) => {
       throw new Error("Unsupported registration type.");
     }
 
+    if ((mode === "platform_business" || mode === "agent_business") && result) {
+      const requested = Array.isArray(body.category_ids) ? body.category_ids : [body.category_id];
+      const categoryIds = [...new Set(requested.map((value: unknown) => String(value ?? "").trim()).filter(Boolean))];
+      if (!categoryIds.length) throw new Error("Select at least one business category.");
+      const { error: categoryError } = await caller.rpc("set_business_category_assignments", {
+        p_business_id: result,
+        p_category_ids: categoryIds,
+      });
+      if (categoryError) throw categoryError;
+    }
+
     return new Response(JSON.stringify({ success: true, id: result, account_created: Boolean(createdUserId) }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (error) {
     if (createdUserId) await admin.auth.admin.deleteUser(createdUserId);
