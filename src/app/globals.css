@@ -426,3 +426,8 @@ input,select,textarea,button{touch-action:manipulation}
  .employee-sale-row{grid-template-columns:28px minmax(0,1fr) auto;gap:6px}
 }
 @media(prefers-reduced-motion:reduce){.employee-dashboard *{transition:none!important;scroll-behavior:auto!important}}
+
+.employee-brand-logo{display:inline-flex;align-items:center;min-width:0}
+.employee-brand-logo img{display:block;width:170px;height:58px;object-fit:contain;object-position:left center}
+@media(max-width:760px){.employee-brand-logo img{width:142px;height:49px}}
+@media(max-width:380px){.employee-brand-logo img{width:128px;height:44px}}
