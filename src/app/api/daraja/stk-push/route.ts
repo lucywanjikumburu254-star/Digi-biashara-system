@@ -40,6 +40,12 @@ export async function POST(request: Request) {
     if (membershipError || !memberships?.length) return NextResponse.json({ error: "An active business membership is required." }, { status: 403 });
     const membership = memberships.find((m: any) => m.role === "owner" || (m.role === "employee" && m.branch_id === body.branch_id && m.permissions?.sales === true));
     if (!membership) return NextResponse.json({ error: "You do not have permission to make POS sales for this branch." }, { status: 403 });
+    const { data: businessAccess, error: accessError } = await session.from("businesses")
+      .select("status").eq("id", membership.business_id).maybeSingle();
+    if (accessError || !businessAccess || businessAccess.status !== "active") {
+      return NextResponse.json({ error: "This business workspace is suspended. Complete subscription payment before starting a sale." }, { status: 423 });
+    }
+
 
     admin = createAdminClient();
     const accountType = body.account_type === "till" ? "till" : "paybill";
