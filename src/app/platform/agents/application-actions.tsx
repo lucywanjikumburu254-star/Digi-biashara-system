@@ -19,7 +19,7 @@ export default function ApplicationActions({id,status}:{id:string;status:string}
       reviewed_at:new Date().toISOString(),approved_at:new Date().toISOString(),updated_at:new Date().toISOString()
     }).eq("id",id);
     if(updateError)throw updateError;
-    setMsg("Approved. Login email is the registered email. New accounts use the phone number as temporary password; existing accounts keep their current password. Change it after signing in.");
+    setMsg("Approved. Login email is the registered email. The registered phone number is now the temporary password. Change it immediately after signing in.");
    }else{
     const{error}=await s.from("agent_applications").update({status:next,reviewed_by:user.id,reviewed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",id);
     if(error)throw error;setMsg("Saved. Refresh the page to see the update.");
