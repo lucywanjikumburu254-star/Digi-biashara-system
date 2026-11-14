@@ -84,6 +84,34 @@ as $$
   );
 $$;
 
+-- Assigned-branch RLS access must also stop at the suspension boundary.
+create or replace function private.is_branch_assigned(p_branch_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $
+  select exists (
+    select 1
+    from public.business_memberships bm
+    join public.branches br on br.id = bm.branch_id
+    join public.businesses b on b.id = br.business_id
+    where bm.branch_id = p_branch_id
+      and bm.user_id = (select auth.uid())
+      and bm.role = 'employee'
+      and bm.status = 'active'
+      and bm.permissions->>'sales' = 'true'
+      and br.status = 'active'
+      and b.status = 'active'
+      and not exists (
+        select 1 from public.business_subscriptions s
+        where s.business_id = b.id
+          and s.status in ('suspended', 'cancelled')
+      )
+  );
+$;
+
 -- A suspended business may read only its own account status so the owner can
 -- reach billing and staff can see the suspension screen.
 drop policy if exists businesses_read on public.businesses;
