@@ -25,8 +25,7 @@ export default function AgentChangePasswordPage() {
       if (role?.role !== "agent" || role.status !== "active") throw new Error("This page is only available to active agents.");
       const { error: passwordError } = await supabase.auth.updateUser({ password });
       if (passwordError) throw passwordError;
-      const { error: flagError } = await supabase.from("platform_roles")
-        .update({ must_change_password: false }).eq("user_id", user.id);
+      const { error: flagError } = await supabase.rpc("agent_complete_password_change");
       if (flagError) throw flagError;
       router.replace("/agent/dashboard"); router.refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to update password."); }
