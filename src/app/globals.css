@@ -460,3 +460,69 @@ input,select,textarea,button{touch-action:manipulation}
  .branch-detail .panelhead .btn{width:100%}
  .branch-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* Digi Biashara unified blue workspace theme — based on the approved Staff Workspace */
+:root{
+  --bg:#f3f6ff;--paper:#fff;--ink:#10204b;--muted:#64769b;--line:#dfe8ff;
+  --green:#0755e8;--navy:#082d73;--primary:#0755e8;--background:#f3f6ff;
+  --foreground:#10204b;--border:#dfe8ff;--surface:#fff;--surface-soft:#f3f6ff;
+  --staff-blue:#0755e8;--staff-navy:#082d73;--staff-green:#079b58;
+  --staff-purple:#7628db;--staff-orange:#f28a08;
+}
+html,body{background:#f3f6ff;color:#10204b}
+.btn{background:linear-gradient(130deg,#1685ff,#0750db);border-radius:12px;box-shadow:0 5px 12px #0755e81c}
+.btn.secondary{background:#fff;color:#0755e8;border:1px solid #d7e4ff;box-shadow:none}
+.side{background:linear-gradient(180deg,#082d73 0%,#0b3b91 100%);color:#eaf1ff}
+.sidetitle{color:#a9c5ff}
+.navlink{color:#eaf1ff;border-radius:11px}
+.navlink:hover,.navlink.active{background:#0755e8;color:#fff;box-shadow:inset 3px 0 #ffd34d}
+.drawer-close{background:#0755e8;color:#fff}
+.menu-trigger{border:1px solid #dce7ff;background:#fff;color:#0755e8;border-radius:12px;box-shadow:0 4px 14px #173c820c}
+.dashhead{background:#fff;border-bottom:1px solid #e1eaff;color:#10204b}
+.dashcontent{background:#f3f6ff}
+.dashcontent .eyebrow,.eyebrow{color:#0755e8}
+.dashcontent h1{color:#102d70;letter-spacing:-.8px}
+.dashcontent .sub{color:#64769b}
+.panel,.authbox,.card,.stat,.receipt{background:#fff;border:1px solid #dfe8ff;border-radius:16px;box-shadow:0 5px 18px #173c8209}
+.panel h2,.card h3{color:#102d70}
+.stat{padding:19px}
+.stat span{color:#64769b;font-weight:700}
+.stat strong{color:#102d70}
+.table th{background:#f2f6ff;color:#64769b;border-bottom:1px solid #dfe8ff}
+.table td{border-bottom:1px solid #edf1fa;color:#20345f}
+.pill{background:#dcf9e9;color:#087747}
+.pill.warn{background:#fff0d8;color:#9a5a00}
+.field input,.field select,.workspace-form .field input,.workspace-form .field select,
+.line-entry .field input,.line-entry .field select{border:1px solid #d5e0f6;border-radius:10px;background:#fff;color:#13234c}
+.field input:focus,.field select:focus{outline:2px solid #b9d2ff;border-color:#0755e8}
+.success{background:#e2f9ec;color:#087344;border:1px solid #a7eac4}
+.error{background:#fff0f0;color:#a12828;border:1px solid #ffd0d0;border-radius:10px}
+.notice-info,.payment-reminder{border-radius:13px}
+.pos-method.selected{border:2px solid #0755e8;background:#edf4ff;color:#0755e8;box-shadow:0 0 0 2px #0755e812}
+.pos-grand-total strong{color:#102d70}
+.sale-link{color:#0755e8}
+.catalog-tools{background:#f3f6ff;border-color:#dfe8ff}
+.card{transition:transform .16s,box-shadow .16s}
+.card:hover{transform:translateY(-2px);box-shadow:0 10px 24px #173c8215}
+.cards.module-cards .card{min-height:132px;border:0;color:#fff;display:flex;flex-direction:column;justify-content:center}
+.cards.module-cards .card h3,.cards.module-cards .card p{color:#fff}
+.cards.module-cards .card:nth-child(4n+1){background:linear-gradient(130deg,#1685ff,#0750db)}
+.cards.module-cards .card:nth-child(4n+2){background:linear-gradient(130deg,#0dbd72,#07864e)}
+.cards.module-cards .card:nth-child(4n+3){background:linear-gradient(130deg,#913cff,#6421cb)}
+.cards.module-cards .card:nth-child(4n){background:linear-gradient(130deg,#ffad28,#ed7100)}
+.auth{max-width:520px;margin:34px auto;padding:0 18px}
+.authbox{padding:30px;border-radius:20px;box-shadow:0 14px 38px #0755e81a}
+.auth h1{color:#102d70}
+.authbox .eyebrow{color:#0755e8}
+.authbox .btn{min-height:48px}
+@media(max-width:700px){
+  .dashcontent{background:#f3f6ff;padding:16px 12px 30px}
+  .panel{border-radius:15px}
+  .stat{border-radius:15px}
+  .auth{margin:20px auto}
+  .authbox{padding:24px 18px}
+  .cards.module-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .cards.module-cards .card{padding:15px;min-height:120px}
+}
+@media(prefers-reduced-motion:reduce){.card{transition:none}}
