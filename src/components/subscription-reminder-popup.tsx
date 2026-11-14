@@ -27,7 +27,9 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
   useEffect(() => {
     let active = true;
     let timeout: number | undefined;
-    (async () => {
+    let interval: number | undefined;
+
+    const checkSubscription = async () => {
       const { data, error } = await db
         .from("business_subscriptions")
         .select("scheduled_suspend_at,monthly_fee")
@@ -43,7 +45,10 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
 
       const storageKey = `db-subscription-reminder:${businessId}:${due.toISOString()}:${nextStage}`;
       try {
-        if (window.localStorage.getItem(storageKey) === "shown") return;
+        if (window.localStorage.getItem(storageKey) === "shown") {
+          if (interval) window.clearInterval(interval);
+          return;
+        }
         window.localStorage.setItem(storageKey, "shown");
       } catch {
         // The reminder remains available for this visit if browser storage is disabled.
@@ -55,10 +60,16 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
       setStage(nextStage);
       setAmountDue(Number(data.monthly_fee ?? 0));
       setVisible(true);
+      if (interval) window.clearInterval(interval);
       timeout = window.setTimeout(() => setVisible(false), 20_000);
-    })();
+    };
+
+    interval = window.setInterval(() => void checkSubscription(), 60_000);
+    void checkSubscription();
+
     return () => {
       active = false;
+      if (interval) window.clearInterval(interval);
       if (timeout) window.clearTimeout(timeout);
     };
   }, [businessId, db]);
