@@ -45,19 +45,16 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
       if (!nextStage) return;
 
       const { data: { user } } = await db.auth.getUser();
-      if (!active || !user) return;
+      if (!active || !user || shownThisMount) return;
       const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Nairobi" }).format(new Date());
-      const storageKey = `db-subscription-reminder:${businessId}:${user.id}:${today}`;
-      try {
-        if (window.localStorage.getItem(storageKey) === "shown") {
-          if (interval) window.clearInterval(interval);
-          return;
-        }
-        window.localStorage.setItem(storageKey, "shown");
-      } catch {
-        // Fall back to one display per mounted workspace visit if browser storage is unavailable.
+      const { data: claimed, error: claimError } = await db.rpc("claim_business_subscription_reminder", {
+        p_business_id: businessId,
+        p_reminder_date: today,
+      });
+      if (claimError || !claimed || !active) {
+        if (interval) window.clearInterval(interval);
+        return;
       }
-
       if (!active || shownThisMount) return;
       shownThisMount = true;
       setDueDate(due);
