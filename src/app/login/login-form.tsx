@@ -33,7 +33,7 @@ export function LoginForm({ portal }: { portal: LoginPortal }) {
       const userId = data.user.id;
       const { data: platformRole, error: platformRoleError } = await supabase
         .from("platform_roles")
-        .select("role")
+        .select("role,must_change_password")
         .eq("user_id", userId)
         .eq("status", "active")
         .maybeSingle();
