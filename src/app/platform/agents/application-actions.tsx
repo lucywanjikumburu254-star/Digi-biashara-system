@@ -29,7 +29,7 @@ export default function ApplicationActions({id,status}:{id:string;status:string}
  }
  return <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
   {status==="pending"&&<button className="btn small secondary" disabled={busy} onClick={()=>update("reviewing")}>Review</button>}
-  {["pending","reviewing"].includes(status)&&<button className="btn small" disabled={busy} onClick={()=>update("approved")}>Approve & create login</button>}
+  {["pending","reviewing","approved"].includes(status)&&<button className="btn small" disabled={busy} onClick={()=>update("approved")}>{status==="approved"?"Create / link login":"Approve & create login"}</button>}
   {status!=="rejected"&&status!=="approved"&&<button className="btn small secondary" disabled={busy} onClick={()=>update("rejected")}>Reject</button>}
   {msg&&<small className="muted">{msg}</small>}
  </div>;
