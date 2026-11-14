@@ -26,6 +26,11 @@ export async function POST(request: Request) {
       .select("role,branch_id,permissions").eq("business_id", businessId).eq("user_id", user.id).eq("status", "active");
     if (membershipError || !memberships?.length) return NextResponse.json({ error: "An active business membership is required." }, { status: 403 });
     const allowed = memberships.some((m: any) => m.role === "owner" || (m.role === "employee" && m.branch_id === branchId && m.permissions?.sales === true));
+    const { data: businessAccess, error: accessError } = await session.from("businesses")
+      .select("status").eq("id", businessId).maybeSingle();
+    if (accessError || !businessAccess || businessAccess.status !== "active") {
+      return NextResponse.json({ error: "This business workspace is suspended. Complete subscription payment before recording sales." }, { status: 423 });
+    }
     if (!allowed) return NextResponse.json({ error: "You do not have permission to record sales for this branch." }, { status: 403 });
 
     const { data: saleId, error: saleError } = await session.rpc("record_manual_mpesa_sale", {
