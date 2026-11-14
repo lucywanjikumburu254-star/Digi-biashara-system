@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import BrandLogo from "@/components/brand-logo";
 
 type Item = { id:string; name:string; selling_price:number; item_type:string; track_stock:boolean };
 type Customer = { id:string; name:string; phone:string|null };
@@ -110,7 +111,7 @@ export default function EmployeeSales({businessId,branchId,branchName}:{business
 
   return <main className="employee-dashboard">
     <header className="employee-mobile-header">
-      <div className="employee-brand"><span className="employee-brand-mark">🛒</span><span>Digi <b>Biashara</b><small>Smart Business. Greater Growth.</small></span></div>
+      <BrandLogo className="employee-brand-logo" />
       <div className="employee-header-right"><span className="employee-online-dot"/> <span>Online</span><form action="/logout" method="post"><button type="submit" aria-label="Sign out">↗</button></form></div>
     </header>
 
