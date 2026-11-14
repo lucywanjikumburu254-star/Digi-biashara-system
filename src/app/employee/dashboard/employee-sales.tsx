@@ -14,7 +14,7 @@ type View = "home" | "new-sale" | "sales" | "mpesa" | "profile";
 const money=(value:number)=>"KSh "+Number(value??0).toLocaleString("en-KE",{minimumFractionDigits:2,maximumFractionDigits:2});
 const methodName=(value:string)=>value?.startsWith("mpesa")?"M-Pesa":value==="cash"?"Cash":value==="card"?"Card":value==="bank"?"Bank":value==="credit"?"Credit":value||"—";
 
-export default function EmployeeSales({businessId,branchId,branchName}:{businessId:string;branchId:string;branchName:string}) {
+export default function EmployeeSales({businessId,businessName,branchId,branchName}:{businessId:string;businessName:string;branchId:string;branchName:string}) {
   const db=useMemo(()=>createClient(),[]);
   const [products,setProducts]=useState<Item[]>([]);
   const [customers,setCustomers]=useState<Customer[]>([]);
@@ -110,7 +110,7 @@ export default function EmployeeSales({businessId,branchId,branchName}:{business
     <div className="employee-sale-right"><strong>{money(Number(s.total))}</strong><span className={"employee-status "+(Number(s.balance)>0?"pending":s.payment_method?.startsWith("mpesa")?"verified":"complete")}>{Number(s.balance)>0?"Balance due":s.payment_method?.startsWith("mpesa")?"Recorded":"Completed"}</span><small>{methodName(s.payment_method)}</small></div>
   </article>)}</div>}
 
-  return <main className="employee-dashboard"><SubscriptionReminderPopup businessId={businessId} businessName={branchName.split(" · ")[0] || "Your business"}/>
+  return <main className="employee-dashboard"><SubscriptionReminderPopup businessId={businessId} businessName={businessName}/>
     <header className="employee-mobile-header">
       <BrandLogo className="employee-brand-logo" />
       <div className="employee-header-right"><span className="employee-online-dot"/> <span>Online</span><form action="/logout" method="post"><button type="submit" aria-label="Sign out">↗</button></form></div>
