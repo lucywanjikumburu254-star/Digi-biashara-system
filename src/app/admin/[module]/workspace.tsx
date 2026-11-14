@@ -229,6 +229,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   }
 
   function edit(row:Row){
+    if(moduleName==="branches"){setShowBranchForm(true);setSelectedBranchId(null);}
     setEditingId(row.id);setForm(p=>({...p,name:row.name??row.full_name??"",sku:row.sku??"",barcode:row.barcode??"",item_type:row.item_type??"product",category:row.category??"",unit:row.unit??"piece",cost_price:String(row.cost_price??0),selling_price:String(row.selling_price??0),reorder_level:String(row.reorder_level??0),track_stock:String(row.track_stock??true),address:row.address??"",phone:row.phone??"",opening_time:row.opening_time??"",closing_time:row.closing_time??"",email:row.email??"",notes:row.notes??"",contact_person:row.contact_person??"",job_title:row.job_title??"",employment_type:row.employment_type??"permanent",monthly_salary:String(row.monthly_salary??0),branch_id:row.branch_id??""}));
     window.scrollTo({top:0,behavior:"smooth"});
   }
@@ -316,7 +317,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     return <label className="field" key={key}><span>{label}</span><select required={required} value={form[key]??""} onChange={e=>{const value=e.target.value;set(key,value);if(moduleName==="catalog"&&key==="item_type")set("track_stock",value==="service"?"false":"true");}}><option value="">Select {label.toLowerCase()}</option>{opts.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></label>;
   }
   function formPanel(children:ReactNode,onSubmit=save,button="Save record"){
-    return <form className="panel workspace-form" onSubmit={onSubmit as any}><div className="panelhead"><h2>{editingId?"Edit record":"Add new record"}</h2>{editingId&&<button type="button" className="btn secondary small" onClick={reset}>Cancel edit</button>}</div><div className="form-grid">{children}</div><div className="form-actions"><button className="btn" disabled={saving}>{saving?"Saving…":button}</button></div></form>;
+    return <form className="panel workspace-form" onSubmit={onSubmit as any}><div className="panelhead"><h2>{editingId?"Edit record":"Add new record"}</h2>{(editingId||moduleName==="branches")&&<button type="button" className="btn secondary small" onClick={()=>{reset();setShowBranchForm(false);}}>Cancel</button>}</div><div className="form-grid">{children}</div><div className="form-actions"><button className="btn" disabled={saving}>{saving?"Saving…":button}</button></div></form>;
   }
   function editActions(r:Row){return <div className="row-actions"><button type="button" className="btn secondary small" onClick={()=>edit(r)}>Edit</button><button type="button" className="btn secondary small" disabled={saving} onClick={()=>void deactivate(r)}>Deactivate</button></div>;}
 
