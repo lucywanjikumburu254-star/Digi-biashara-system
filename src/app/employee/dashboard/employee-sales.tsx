@@ -72,11 +72,11 @@ export default function EmployeeSales({businessId,branchId,branchName}:{business
 
   async function completeSale(){
     if(!cart.length){setError("Add at least one product or service.");return;}
-    if(paymentMethod.startsWith("mpesa_")&&!/^[A-Z0-9]{6,20}$/.test(mpesaCode.trim().toUpperCase())){setError("Enter the M-Pesa transaction code from the customer's confirmation message.");return;}
+    if(paymentMethod==="mpesa"&&!/^[A-Z0-9]{6,20}$/.test(mpesaCode.trim().toUpperCase())){setError("Enter the M-Pesa transaction code from the customer's confirmation message.");return;}
     setSaving(true);setError("");setMessage("");
     try{
-      if(paymentMethod.startsWith("mpesa_")){
-        const accountType=paymentMethod.replace("mpesa_","") as "till"|"paybill"|"pochi";
+      if(paymentMethod==="mpesa"){
+        const accountType=null;
         const response=await fetch("/api/daraja/manual-sale",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
           business_id:businessId,branch_id:branchId,items:cart,customer_id:customerId||null,
           discount:0,tax:0,notes:notes||null,account_type:accountType,reference:mpesaCode.trim().toUpperCase()
@@ -93,7 +93,7 @@ export default function EmployeeSales({businessId,branchId,branchName}:{business
         if(rpcError) throw rpcError;
       }
       setCart([]);setCustomerId("");setPaymentMethod("cash");setAmountPaid("");setMpesaCode("");setNotes("");
-      setMessage(paymentMethod.startsWith("mpesa_")?"M-Pesa sale and transaction code recorded successfully. The code is saved with this sale; it is not independently verified by Safaricom.":"Sale completed successfully. Stock has been updated.");
+      setMessage(paymentMethod==="mpesa"?"M-Pesa sale and transaction code recorded successfully. The code is saved with this sale; it is not independently verified by Safaricom.":"Sale completed successfully. Stock has been updated.");
       setView("home");await load();
     }catch(e){setError(e instanceof Error?e.message:"Unable to complete this sale.");}
     finally{setSaving(false);}
@@ -148,13 +148,13 @@ export default function EmployeeSales({businessId,branchId,branchName}:{business
       <div className="employee-cart">{cart.length===0?<p>No items added yet. Select a product or service above.</p>:cart.map((line,index)=>{const p=products.find(x=>x.id===line.product_id);return <div className="employee-cart-row" key={index}><span>{p?.name??"Item"} × {line.quantity}</span><b>{money(line.quantity*line.unit_price)}</b><button type="button" onClick={()=>setCart(v=>v.filter((_,i)=>i!==index))}>Remove</button></div>;})}</div>
       <div className="employee-form-grid employee-checkout-extra">
         <label>Customer (optional)<select value={customerId} onChange={e=>setCustomerId(e.target.value)}><option value="">Walk-in customer</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}{c.phone?" · "+c.phone:""}</option>)}</select></label>
-        <label>Payment method<select value={paymentMethod} onChange={e=>{setPaymentMethod(e.target.value);setMpesaCode("");}}><option value="cash">Cash</option><option value="mpesa_till">M-Pesa Till</option><option value="mpesa_paybill">M-Pesa PayBill</option><option value="mpesa_pochi">Pochi la Biashara</option><option value="card">Card</option><option value="bank">Bank</option><option value="credit">Credit</option></select></label>
-        {!paymentMethod.startsWith("mpesa_")&&<label>Amount received (KSh)<input type="number" min="0" step="0.01" placeholder={subtotal.toFixed(2)} value={amountPaid} onChange={e=>setAmountPaid(e.target.value)}/></label>}
+        <label>Payment method<select value={paymentMethod} onChange={e=>{setPaymentMethod(e.target.value);setMpesaCode("");}}><option value="cash">Cash</option><option value="mpesa">M-Pesa</option><option value="card">Card</option><option value="bank">Bank</option><option value="credit">Credit</option></select></label>
+        {!paymentMethod==="mpesa"&&<label>Amount received (KSh)<input type="number" min="0" step="0.01" placeholder={subtotal.toFixed(2)} value={amountPaid} onChange={e=>setAmountPaid(e.target.value)}/></label>}
         <label>Sale note (optional)<input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Add a note"/></label>
       </div>
-      {paymentMethod.startsWith("mpesa_")&&<div className="employee-mpesa-entry"><div className="employee-mpesa-entry-title"><span>▣</span><div><b>Record M-Pesa transaction code</b><small>Enter the code from the customer's Safaricom confirmation message.</small></div></div><label>M-Pesa transaction code<input autoCapitalize="characters" autoComplete="off" maxLength={20} value={mpesaCode} onChange={e=>setMpesaCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,""))} placeholder="e.g. QW3F7H9K2"/></label><p>Check the payment in the business M-Pesa account before saving. Digi Biashara records the code against this sale but does not automatically verify it with Safaricom.</p></div>}
+      {paymentMethod==="mpesa"&&<div className="employee-mpesa-entry"><div className="employee-mpesa-entry-title"><span>▣</span><div><b>Record M-Pesa transaction code</b><small>Enter the code from the customer's Safaricom confirmation message.</small></div></div><label>M-Pesa transaction code<input autoCapitalize="characters" autoComplete="off" maxLength={20} value={mpesaCode} onChange={e=>setMpesaCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,""))} placeholder="e.g. QW3F7H9K2"/></label><p>Check the payment in the business M-Pesa account before saving. Digi Biashara records the code against this sale but does not automatically verify it with Safaricom.</p></div>}
       <div className="employee-total"><span>Sale total</span><strong>{money(subtotal)}</strong></div>
-      <button className="employee-complete-button" type="button" disabled={saving||cart.length===0||subtotal<=0||(paymentMethod.startsWith("mpesa_")&&!mpesaCode.trim())} onClick={()=>void completeSale()}>{saving?"Saving sale…":paymentMethod.startsWith("mpesa_")?"✓ Save sale & M-Pesa code":"✓ Complete sale"}</button>
+      <button className="employee-complete-button" type="button" disabled={saving||cart.length===0||subtotal<=0||(paymentMethod==="mpesa"&&!mpesaCode.trim())} onClick={()=>void completeSale()}>{saving?"Saving sale…":paymentMethod==="mpesa"?"✓ Save sale & M-Pesa code":"✓ Complete sale"}</button>
     </section>}
 
     {(view==="home"||view==="sales"||view==="mpesa")&&<section className="employee-panel employee-recent-panel">
