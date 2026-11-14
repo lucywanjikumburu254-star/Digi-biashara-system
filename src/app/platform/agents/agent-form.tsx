@@ -5,7 +5,7 @@ export default function AgentCreateForm(){
  async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError("");setMessage("");
   try{const s=createClient();const {data,error}=await s.functions.invoke("register-business",{body:{mode:"agent_account",email,password:phone,full_name:name,phone,territory,agent_code:code}});
    if(error)throw error;if(data?.error)throw new Error(data.error);
-   setMessage("Agent account activated: "+data.id+(data.account_created?" Login created.":" Existing login linked. If this is an existing account, use its current password."));
+   setMessage("Agent account activated: "+data.id+(data.account_created?" Login created.":" Existing account linked and phone number set as temporary password."));
    setEmail("");setName("");setPhone("");setTerritory("");setCode("");
   }catch(e){setError(e instanceof Error?e.message:"Unable to assign agent role.");}finally{setBusy(false);}
  }
