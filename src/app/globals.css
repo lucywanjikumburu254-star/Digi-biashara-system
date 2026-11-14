@@ -649,3 +649,32 @@ html,body{background:#f3f6ff;color:#10204b}
   .employee-sale-row{grid-template-columns:26px minmax(0,1fr);gap:7px}
   .employee-sale-right{grid-column:2;justify-items:start;text-align:left}
 }
+
+
+/* Subscription reminder popup — automatically dismisses after 20 seconds */
+.db-subscription-overlay{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:18px;background:#071b3bb8;backdrop-filter:blur(5px);animation:db-sub-fade-in .18s ease-out}
+.db-subscription-popup{position:relative;width:min(100%,510px);padding:30px;border:1px solid #dce7ff;border-radius:22px;background:#fff;color:#10204b;box-shadow:0 28px 90px #061b4d55;animation:db-sub-pop-in .22s ease-out}
+.db-subscription-close{position:absolute;top:13px;right:15px;width:36px;height:36px;border:0;border-radius:50%;background:#eef3ff;color:#36527f;font-size:25px;line-height:1}
+.db-subscription-kicker{display:flex;align-items:center;gap:8px;color:#9a5a00;font-size:10px;font-weight:900;letter-spacing:1.3px}
+.db-subscription-kicker span{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#fff0d8;font-size:18px}
+.db-subscription-popup h2{max-width:390px;margin:17px 0 12px;color:#102d70;font-size:24px;line-height:1.2;letter-spacing:-.6px}
+.db-subscription-countdown{display:flex;align-items:baseline;gap:8px;margin:14px 0;color:#0755e8}
+.db-subscription-countdown strong{font-size:35px;line-height:1;font-weight:950;letter-spacing:-1.5px}
+.db-subscription-countdown span{font-size:12px;font-weight:900;letter-spacing:1.4px}
+.db-subscription-popup>p{margin:0 0 18px;color:#64769b;font-size:13px;line-height:1.6}
+.db-subscription-details{display:grid;gap:0;padding:5px 15px;border:1px solid #e0e9fb;border-radius:14px;background:#f7f9ff}
+.db-subscription-details>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #e5ecfa;font-size:12px}
+.db-subscription-details>div:last-child{border:0}
+.db-subscription-details span{color:#64769b}
+.db-subscription-details b{color:#17366f;text-align:right}
+.db-subscription-safe{margin:15px 0;padding:11px 12px;border:1px solid #b8edcf;border-radius:11px;background:#effcf4;color:#087747;font-size:11px;line-height:1.5;font-weight:750}
+.db-subscription-actions{display:grid;gap:7px}
+.db-subscription-primary{display:flex;align-items:center;justify-content:center;min-height:47px;border-radius:11px;background:linear-gradient(130deg,#1685ff,#0750db);color:#fff;font-size:13px;font-weight:900;box-shadow:0 5px 12px #0755e81c}
+.db-subscription-later{min-height:40px;border:0;border-radius:10px;background:transparent;color:#64769b;font-size:12px;font-weight:800}
+.db-subscription-timer{height:3px;overflow:hidden;margin-top:12px;border-radius:8px;background:#e7edfa}
+.db-subscription-timer span{display:block;width:100%;height:100%;transform-origin:left;background:#0755e8;animation:db-sub-timer 20s linear forwards}
+@keyframes db-sub-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes db-sub-pop-in{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes db-sub-timer{to{transform:scaleX(0)}}
+@media(max-width:520px){.db-subscription-popup{padding:24px 18px;border-radius:18px}.db-subscription-popup h2{font-size:21px}.db-subscription-countdown strong{font-size:31px}.db-subscription-details>div{align-items:flex-start;flex-direction:column;gap:4px}.db-subscription-details b{text-align:left}}
+@media(prefers-reduced-motion:reduce){.db-subscription-overlay,.db-subscription-popup,.db-subscription-timer span{animation:none}}
