@@ -23,5 +23,5 @@ export default async function EmployeeDashboard(){
   const {data:branch}=await s.from("branches").select("id,name").eq("id",m.branch_id).eq("business_id",m.business_id).eq("status","active").maybeSingle();
   if(!branch) return <main className="wrap"><Link className="logo" href="/">DIGI<em>BIASHARA</em></Link><h1>Branch access unavailable</h1><p className="muted">Ask the business owner to assign you to an active branch.</p><form action="/logout" method="post"><button type="submit" className="btn">Sign out</button></form></main>;
 
-  return <EmployeeSales businessId={m.business_id} branchId={branch.id} branchName={branch.name}/>;
+  return <EmployeeSales businessId={m.business_id} businessName={business?.name??"Your business"} branchId={branch.id} branchName={branch.name}/>;
 }
