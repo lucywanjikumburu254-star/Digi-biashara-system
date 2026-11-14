@@ -47,7 +47,7 @@ export function LoginForm({ portal }: { portal: LoginPortal }) {
           return;
         }
         if (platformRole?.role === "agent") {
-          router.replace("/agent/dashboard");
+          router.replace(platformRole.must_change_password ? "/agent/change-password" : "/agent/dashboard");
           router.refresh();
           return;
         }
