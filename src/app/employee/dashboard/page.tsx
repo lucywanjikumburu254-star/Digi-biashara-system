@@ -10,13 +10,13 @@ export default async function EmployeeDashboard(){
   if(!user) redirect("/login");
 
   const {data:m,error}=await s.from("business_memberships")
-    .select("business_id,branch_id,permissions,businesses(name,status)")
+    .select("business_id,branch_id,permissions,businesses(name,status),subscription:business_subscriptions(status)")
     .eq("user_id",user.id).eq("role","employee").eq("status","active")
     .order("created_at",{ascending:true}).limit(1).maybeSingle();
 
   if(error||!m||!m.branch_id||m.permissions?.sales!==true) redirect("/login");
   const business:any=m.businesses;
-  if(business?.status!=="active"){
+  const subscription:any=Array.isArray((m as any).subscription)?(m as any).subscription[0]:(m as any).subscription;\n  if(business?.status!=="active"||["suspended","cancelled"].includes(subscription?.status)){
     return <main className="wrap"><BrandLogo /><h1>Business access paused</h1><p className="muted">Your business owner should contact platform support about the subscription. Business data remains stored.</p><form action="/logout" method="post"><button type="submit" className="btn">Sign out</button></form></main>;
   }
 
