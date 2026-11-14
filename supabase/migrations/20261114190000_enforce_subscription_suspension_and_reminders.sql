@@ -173,13 +173,17 @@ begin
        set scheduled_suspend_at = coalesce(
              s.scheduled_suspend_at,
              (case
-               when s.status = 'trial' then s.trial_ends_at
-               else coalesce(s.due_at, s.current_period_ends_at)
-             end) + make_interval(days => s.grace_period_days)
+               when s.status = 'trial' then coalesce(s.trial_ends_at, s.due_at, s.current_period_ends_at)
+               else coalesce(s.due_at, s.current_period_ends_at, s.trial_ends_at)
+             end) + make_interval(days => coalesce(s.grace_period_days, 3))
            ),
            updated_at = now()
      where s.status in ('trial', 'payment_due', 'grace_period', 'active')
        and s.scheduled_suspend_at is null
+       and (case
+              when s.status = 'trial' then coalesce(s.trial_ends_at, s.due_at, s.current_period_ends_at)
+              else coalesce(s.due_at, s.current_period_ends_at, s.trial_ends_at)
+            end) is not null
     returning s.business_id
   )
   select count(*) into v_scheduled from scheduled;
