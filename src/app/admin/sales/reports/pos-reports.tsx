@@ -34,6 +34,7 @@ export default function PosReports({ businessId, businessName, role, assignedBra
   const [error, setError] = useState("");
   const [generatedAt, setGeneratedAt] = useState("");
   const [printedAt, setPrintedAt] = useState("");
+  const [mpesaOnly, setMpesaOnly] = useState(false);
   const [reportRef, setReportRef] = useState("Preparing report reference…");
 
   const isOwner = role === "owner" || role === "super_admin";
@@ -147,15 +148,16 @@ export default function PosReports({ businessId, businessName, role, assignedBra
   const selectedBranchName = branchId === "all" ? "All branches" : branchName(branchId);
   const generatedText = generatedAt ? dateTime(generatedAt) + " EAT" : "—";
 
-  function printReport() {
+  function printReport(mpesaStatement = false) {
     setPrintedAt(new Date().toISOString());
-    window.requestAnimationFrame(() => window.print());
+    setMpesaOnly(mpesaStatement);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => window.print()));
   }
 
-  return <div className="layout"><BusinessNav active="sales-reports"/><main className="main"><div className="pos-report-page">
+  return <div className="layout"><BusinessNav active="sales-reports"/><main className="main"><div className={`pos-report-page ${mpesaOnly ? "mpesa-mode" : ""}`}>
     <div className="pos-report-toolbar no-print">
       <Link className="btn secondary small" href="/admin/sales">← Back to POS</Link>
-      <div className="pos-report-actions"><button className="btn secondary" type="button" onClick={() => void load()} disabled={loading}>Refresh report</button><button className="btn" type="button" onClick={printReport} disabled={loading}>Download complete PDF / Print</button></div>
+      <div className="pos-report-actions"><button className="btn secondary" type="button" onClick={() => void load()} disabled={loading}>Refresh report</button><button className="btn" type="button" onClick={() => printReport(false)} disabled={loading}>Download main report / Print</button><button className="btn secondary" type="button" onClick={() => printReport(true)} disabled={loading}>Download M-Pesa statement</button></div>
     </div>
 
     <section className="panel no-print">
@@ -177,13 +179,16 @@ export default function PosReports({ businessId, businessName, role, assignedBra
       <header className="pos-report-heading">
         <div className="report-brand"><BrandLogo className="report-brand-logo"/></div>
         <div className="eyebrow">OFFICIAL BUSINESS FINANCIAL RECORD</div>
-        <h1>COMPLETE POS & PAYMENT REPORT</h1>
+        <h1>{mpesaOnly ? "M-PESA TRANSACTION STATEMENT" : "COMPLETE POS & SALES REPORT"}</h1>
         <strong>{businessName}</strong>
         <p>{selectedBranchName} · {periodText}</p>
         <div className="report-meta"><span>Generated: {generatedText}</span><span>Report reference: {reportRef}</span></div>
       </header>
 
       {loading ? <p className="empty">Loading complete report data…</p> : error ? <div className="error" role="alert">{error}</div> : <>
+        <section className="report-authentication top-authentication">
+          <div className="official-seal"><span className="seal-top">DIGI BIASHARA</span><span className="seal-mark">✓</span><strong>OFFICIAL REPORT</strong><small>DIGITAL KINGDOM SOLUTIONS</small><small>GENERATED {generatedAt ? new Date(generatedAt).toLocaleDateString("en-KE", { timeZone: "Africa/Nairobi" }) : "—"}</small></div>
+        </section>
         <section className="report-section">
           <h2>1. Business performance summary</h2>
           <div className="pos-report-stats">
@@ -194,8 +199,7 @@ export default function PosReports({ businessId, businessName, role, assignedBra
           </div>
           <div className="report-summary-line"><span>Product sales value</span><strong>{money(productTotals.reduce((n, x) => n + x.revenue, 0))}</strong></div>
           <div className="report-summary-line"><span>Service sales value</span><strong>{money(serviceTotals.reduce((n, x) => n + x.revenue, 0))}</strong></div>
-          <div className="report-summary-line"><span>Recorded incoming payments (all sources)</span><strong>{money(incoming(paymentRows))}</strong></div>
-          <div className="report-summary-line"><span>Recorded outgoing / refunds</span><strong>{money(outgoing(paymentRows))}</strong></div>
+          <div className="report-summary-line"><span>Payments recorded against sales</span><strong>{money(salesPaid)}</strong></div>
         </section>
 
         <section className="report-section">
@@ -212,6 +216,10 @@ export default function PosReports({ businessId, businessName, role, assignedBra
           <table className="table"><thead><tr><th>Service</th><th>Category</th><th>Times performed</th><th>Unit</th><th>Sales total</th></tr></thead><tbody>
             {serviceTotals.length ? serviceTotals.map((x) => <tr key={x.name}><td>{x.name}</td><td>{x.category || "—"}</td><td>{x.quantity.toLocaleString("en-KE")}</td><td>{x.unit || "—"}</td><td>{money(x.revenue)}</td></tr>) : <tr><td colSpan={5}>No service sales recorded for this period.</td></tr>}
           </tbody><tfoot><tr><th colSpan={2}>Services total</th><th>{serviceTotals.reduce((n, x) => n + x.quantity, 0).toLocaleString("en-KE")}</th><th></th><th>{money(serviceTotals.reduce((n, x) => n + x.revenue, 0))}</th></tr></tfoot></table>
+        </section>
+
+        <section className="report-authentication middle-authentication">
+          <div className="verification-stamp"><strong>DIGI BIASHARA</strong><b>✓ OFFICIAL DIGITAL BUSINESS REPORT</b><span>Generated by Digital Kingdom Solutions</span><span>Generated: {generatedText}</span>{printedAt && <span>Printed: {dateTime(printedAt)} EAT</span>}<span>Report ID: {reportRef}</span><small>Keep this reference when verifying this report.</small></div>
         </section>
 
         <section className="report-section">
@@ -240,24 +248,24 @@ export default function PosReports({ businessId, businessName, role, assignedBra
           }) : <p className="report-empty">No completed sales recorded for this period.</p>}
         </section>
 
-        <section className="report-section">
-          <h2>5. Payment summary and recorded transactions</h2>
+        {!mpesaOnly && <section className="report-section main-payment-section">
+          <h2>5. Payment summary and recorded transactions (excluding M-Pesa statement)</h2>
           <div className="pos-report-stats">
             <div><small>Incoming payments recorded</small><strong>{money(incoming(paymentRows))}</strong></div>
             <div><small>Outgoing / refunds recorded</small><strong>{money(outgoing(paymentRows))}</strong></div>
             <div><small>Payment records</small><strong>{paymentRows.length}</strong></div>
-            <div><small>M-Pesa recorded</small><strong>{money(incoming(mpesaRows))}</strong></div>
+            
           </div>
           <h3>Payment method totals</h3>
-          <table className="table"><thead><tr><th>Payment method</th><th>Recorded amount received</th></tr></thead><tbody>{methodSummary.length ? methodSummary.map(([method, amount]) => <tr key={method}><td>{method.toUpperCase()}</td><td>{money(amount)}</td></tr>) : <tr><td colSpan={2}>No incoming payments recorded.</td></tr>}</tbody></table>
+          <table className="table"><thead><tr><th>Payment method</th><th>Recorded amount received</th></tr></thead><tbody>{methodSummary.filter(([method]) => method !== "mpesa").length ? methodSummary.filter(([method]) => method !== "mpesa").map(([method, amount]) => <tr key={method}><td>{method.toUpperCase()}</td><td>{money(amount)}</td></tr>) : <tr><td colSpan={2}>No non-M-Pesa incoming payments recorded.</td></tr>}</tbody></table>
           <h3>All payment records</h3>
           <table className="table"><thead><tr><th>Date & time</th><th>Method</th><th>Reference</th><th>Source</th><th>Recorded by</th><th>Status</th><th>Direction</th><th>Amount</th></tr></thead><tbody>
-            {paymentRows.length ? paymentRows.map((p) => <tr key={p.id}><td>{dateTime(p.date)}</td><td>{String(p.method || "—").toUpperCase()}</td><td>{p.reference || "—"}</td><td>{p.source}</td><td>{cashierName(p.created_by)}</td><td>{p.status || "—"}</td><td>{p.direction === "out" ? "Paid out" : "Received"}</td><td>{money(p.amount)}</td></tr>) : <tr><td colSpan={8}>No payment records found for this period.</td></tr>}
+            {paymentRows.filter((p) => p.method !== "mpesa").length ? paymentRows.filter((p) => p.method !== "mpesa").map((p) => <tr key={p.id}><td>{dateTime(p.date)}</td><td>{String(p.method || "—").toUpperCase()}</td><td>{p.reference || "—"}</td><td>{p.source}</td><td>{cashierName(p.created_by)}</td><td>{p.status || "—"}</td><td>{p.direction === "out" ? "Paid out" : "Received"}</td><td>{money(p.amount)}</td></tr>) : <tr><td colSpan={8}>No payment records found for this period.</td></tr>}
           </tbody></table>
-        </section>
+        </section>}
 
-        <section className="report-section">
-          <h2>6. M-Pesa transaction statement</h2>
+        {mpesaOnly && <section className="report-section mpesa-statement">
+          <h2>M-Pesa transaction statement</h2>
           <p className="report-note">This section includes M-Pesa transactions recorded from the POS and payment ledger. It is a Digi Biashara business record, not an official Safaricom statement or independent confirmation of settlement.</p>
           <div className="report-summary-line"><span>M-Pesa incoming recorded</span><strong>{money(incoming(mpesaRows))}</strong></div>
           <div className="report-summary-line"><span>M-Pesa outgoing / refunds recorded</span><strong>{money(outgoing(mpesaRows))}</strong></div>
@@ -265,12 +273,8 @@ export default function PosReports({ businessId, businessName, role, assignedBra
           <table className="table"><thead><tr><th>Date & time</th><th>Transaction code</th><th>Account / source</th><th>Branch</th><th>Recorded by</th><th>Status</th><th>Amount</th></tr></thead><tbody>
             {mpesaRows.length ? mpesaRows.map((p) => <tr key={p.id}><td>{dateTime(p.date)}</td><td>{p.reference || "No code"}</td><td>{String(p.account_type ?? p.source).toUpperCase()}</td><td>{branchName(p.branch_id)}</td><td>{cashierName(p.created_by)}</td><td>{p.status || "—"}</td><td>{money(p.amount)}</td></tr>) : <tr><td colSpan={7}>No M-Pesa transactions recorded for this period.</td></tr>}
           </tbody></table>
-        </section>
+        </section>}
 
-        <section className="report-authentication">
-          <div className="official-seal"><span className="seal-top">DIGI BIASHARA</span><span className="seal-mark">✓</span><strong>OFFICIAL REPORT</strong><small>DIGITAL KINGDOM SOLUTIONS</small><small>GENERATED {generatedAt ? new Date(generatedAt).toLocaleDateString("en-KE", { timeZone: "Africa/Nairobi" }) : "—"}</small></div>
-          <div className="verification-stamp"><strong>DIGI BIASHARA</strong><b>✓ OFFICIAL DIGITAL BUSINESS REPORT</b><span>Generated by Digital Kingdom Solutions</span><span>Generated: {generatedText}</span>{printedAt && <span>Printed: {dateTime(printedAt)} EAT</span>}<span>Report ID: {reportRef}</span><small>Keep this reference when verifying this report.</small></div>
-        </section>
       </>}
 
       <footer className="pos-report-footer">Generated by Digi Biashara · Digital Kingdom Solutions · Report reference: {reportRef} · This report reflects records stored in the selected business, branch and period.</footer>
@@ -282,6 +286,8 @@ export default function PosReports({ businessId, businessName, role, assignedBra
         html, body { background: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         .no-print, .side, .dashhead, .receipt-toolbar, .menu-trigger { display: none !important; }
         .pos-report-page { padding: 0 !important; max-width: none !important; }
+        .pos-report-page.mpesa-mode .pos-report-paper > *:not(.pos-report-heading):not(.mpesa-statement):not(.pos-report-footer) { display:none !important; }
+        .pos-report-page.mpesa-mode .pos-report-heading h1 { font-size:25px; }
         .pos-report-paper { border: 0 !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
         .pos-report-paper .table { width: 100%; font-size: 8px; }
         .pos-report-paper tr, .sale-receipt, .report-authentication { break-inside: avoid; page-break-inside: avoid; }
@@ -323,8 +329,10 @@ export default function PosReports({ businessId, businessName, role, assignedBra
       .sale-details { display:flex; flex-wrap:wrap; gap:6px 18px; padding:8px 0; font-size:10px; color:#475569; }
       .receipt-items { margin:4px 0 8px; }
       .receipt-breakdown { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:7px 18px; font-size:10px; padding-top:7px; border-top:1px solid #dbe3ef; }
-      .report-authentication { display:flex; justify-content:center; align-items:center; gap:28px; flex-wrap:wrap; border-top:2px solid #1d4ed8; padding:22px 0 8px; margin-top:30px; }
-      .official-seal { width:170px; height:170px; border:4px double #1d4ed8; border-radius:50%; color:#1d4ed8; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; outline:1px solid #1d4ed8; outline-offset:4px; gap:5px; background:rgba(239,246,255,.55); }
+      .report-authentication { display:flex; justify-content:center; align-items:center; gap:28px; flex-wrap:wrap; padding:12px 0 18px; margin:8px 0 18px; }
+      .top-authentication { border-bottom:2px solid #1d4ed8; }
+      .middle-authentication { border-top:1px solid #bfdbfe; border-bottom:1px solid #bfdbfe; margin:24px 0; }
+      .official-seal { width:142px; height:142px; border:4px double #1d4ed8; border-radius:50%; color:#1d4ed8; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; outline:1px solid #1d4ed8; outline-offset:4px; gap:5px; background:rgba(239,246,255,.55); }
       .official-seal .seal-top { font-size:13px; font-weight:900; letter-spacing:1px; }
       .official-seal .seal-mark { font-size:28px; line-height:1; border:2px solid #1d4ed8; border-radius:50%; width:37px; height:37px; display:grid; place-items:center; }
       .official-seal strong { font-size:11px; }
