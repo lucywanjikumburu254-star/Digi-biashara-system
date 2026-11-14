@@ -431,3 +431,93 @@ input,select,textarea,button{touch-action:manipulation}
 .employee-brand-logo img{display:block;width:170px;height:58px;object-fit:contain;object-position:left center}
 @media(max-width:760px){.employee-brand-logo img{width:142px;height:49px}}
 @media(max-width:380px){.employee-brand-logo img{width:128px;height:44px}}
+
+
+/* Full-system refresh preview: extend the approved staff dashboard visual language
+   to the business workspace without changing page workflows or data behaviour. */
+:root{
+  --bg:#f4f7ff;--paper:#fff;--ink:#10204b;--muted:#68799c;--line:#e0e9ff;
+  --green:#0755e8;--navy:#082d73;--primary:#0755e8;--background:#f4f7ff;
+  --foreground:#10204b;--border:#e0e9ff;--surface:#fff;--surface-soft:#f5f8ff;
+}
+html,body{background:#f4f7ff;color:#10204b}
+.layout{background:#f4f7ff;grid-template-columns:252px minmax(0,1fr)}
+.side{background:linear-gradient(180deg,#082d73 0%,#0644a7 100%);color:#e8f0ff;border-right:1px solid #174b9c}
+.side .brand-logo{padding:8px 12px 22px}
+.sidetitle{color:#a9c8ff;font-size:10px;letter-spacing:1.5px}
+.navlink{color:#e5efff;border-radius:11px;padding:11px 13px;margin:3px 0;font-weight:650;transition:background .18s,transform .18s}
+.navlink:hover{background:#ffffff18;color:#fff;transform:translateX(2px)}
+.navlink.active{background:linear-gradient(100deg,#0876f9,#0755d8);color:#fff;box-shadow:0 6px 15px #001c5538,inset 3px 0 #9bc7ff}
+.main{min-width:0;background:#f4f7ff}
+.dashhead{height:76px;background:#fff;border-bottom:1px solid #e0e9ff;padding:0 clamp(16px,3vw,34px);box-shadow:0 3px 14px #173c8206}
+.dashhead strong{color:#102d70;font-size:14px}
+.dashcontent{max-width:1500px;padding:30px clamp(16px,3vw,34px) 44px}
+.dashcontent h1{color:#102d70;font-size:clamp(25px,3vw,32px);letter-spacing:-1px}
+.dashcontent .sub{color:#7180a0;line-height:1.55}
+.stats{gap:14px;margin:22px 0}
+.stat,.card,.panel,.authbox{background:#fff;border:1px solid #e0e9ff;border-radius:16px;box-shadow:0 5px 18px #173c8209}
+.stat{padding:20px;transition:transform .18s,box-shadow .18s}
+.stat:hover,.card:hover{transform:translateY(-2px);box-shadow:0 10px 22px #173c8214}
+.stat span{color:#7180a0;font-weight:700}
+.stat strong{color:#102d70;font-size:clamp(21px,2vw,27px)}
+.panel{padding:22px;margin-top:17px}
+.panel h2,.panelhead h2{color:#102d70;font-size:17px}
+.panelhead{gap:14px}
+.btn{background:linear-gradient(100deg,#0876f9,#0751d9);border:0;border-radius:11px;min-height:43px;padding:11px 17px;box-shadow:0 5px 12px #0755e81a;transition:transform .16s,box-shadow .16s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 8px 17px #0755e82b}
+.btn.secondary{background:#f5f8ff;color:#0755d8;border:1px solid #d7e4ff;box-shadow:none}
+.field{gap:8px;margin:15px 0}
+.field label{color:#253b6c;font-weight:800}
+.field input,.field select,.field textarea,.workspace-form input,.workspace-form select,.workspace-form textarea{
+ border:1px solid #d5e0f6;border-radius:10px;padding:12px 13px;background:#fff;color:#13234c;min-height:44px;
+}
+.field input:focus,.field select:focus,.field textarea:focus,.workspace-form input:focus,.workspace-form select:focus,.workspace-form textarea:focus{
+ outline:3px solid #dce9ff;border-color:#3978ed;
+}
+.table{font-size:13px}
+.table th{color:#7180a0;border-bottom:1px solid #e0e9ff;padding:13px 11px}
+.table td{border-bottom:1px solid #edf1fa;padding:14px 11px;color:#263a66}
+.table tr:hover td{background:#f8faff}
+.pill{background:#dcf9e9;color:#087747;border-radius:20px}
+.pill.warn{background:#fff0d8;color:#9a5a00}
+.pill.off{background:#fff0f0;color:#a12828}
+.menu-trigger{border:1px solid #d7e4ff;background:#fff;color:#0755d8;border-radius:10px;box-shadow:0 3px 10px #173c8209;font-weight:800}
+.nav-backdrop{background:#061b3f88;backdrop-filter:blur(2px)}
+.drawer-head{background:#082d73;border-bottom:1px solid #ffffff20}
+.drawer-close{border-radius:9px}
+.notice-info{background:#edf4ff;border-color:#d7e6ff;color:#174a91;border-radius:12px}
+.error{border-radius:10px}
+.schedule-grid .field input,.trial-edit input{border-radius:10px}
+.catalog-tools{background:#f5f8ff;border-color:#e0e9ff;border-radius:14px}
+.catalog-tools .field input,.catalog-tools .field select{border-color:#d5e0f6;border-radius:10px}
+.scanner-tabs button{border-color:#d7e4ff;border-radius:10px}
+.scanner-tabs button.selected{background:#0755e8;border-color:#0755e8}
+.scanner-upload{border-color:#c9d9f7;border-radius:14px;background:#f8faff}
+.receipt,.receipt-page{border-color:#e0e9ff}
+.pos-checkout,.pos-payment{border-color:#e0e9ff;border-radius:16px}
+.pos-method.selected{border-color:#0755e8;background:#edf4ff;color:#0755e8}
+.pos-grand-total strong{color:#0755e8}
+button:focus-visible,a:focus-visible,.btn:focus-visible,.navlink:focus-visible{outline:3px solid #f5b51b;outline-offset:2px}
+@media(max-width:850px){
+ .layout{grid-template-columns:205px minmax(0,1fr)}
+ .side{background:linear-gradient(180deg,#082d73 0%,#0644a7 100%)}
+ .dashcontent{padding:22px 18px 34px}
+}
+@media(max-width:700px){
+ .dashhead{min-height:64px;height:auto}
+ .dashcontent{padding:16px 12px 30px}
+ .panel{padding:15px;border-radius:14px}
+ .stats{gap:9px}
+ .stat{padding:13px;border-radius:13px}
+ .table-wrap{border:1px solid #e0e9ff;border-radius:12px;background:#fff}
+ .table-wrap table{min-width:620px}
+ .panelhead{align-items:flex-start}
+ .actions{gap:8px}
+ .actions .btn{flex:1 1 100%}
+}
+@media(max-width:420px){
+ .dashcontent{padding-inline:10px}
+ .stat{padding:11px}
+ .stat strong{font-size:18px}
+ .panel{padding:12px}
+}
