@@ -55,6 +55,10 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   const [catalogSearch,setCatalogSearch] = useState("");
   const [catalogView,setCatalogView] = useState<"active"|"inactive"|"all">("active");
   const [paymentAccounts,setPaymentAccounts] = useState<MpesaAccount[]>([]);
+  const [selectedBranchId,setSelectedBranchId] = useState<string|null>(null);
+  const [showBranchForm,setShowBranchForm] = useState(false);
+  const [branchStats,setBranchStats] = useState<{sales:number;salesToday:number;stock:number;employees:number;expenses:number}>({sales:0,salesToday:0,stock:0,employees:0,expenses:0});
+  const [branchStatsLoading,setBranchStatsLoading] = useState(false);
 
   const reset = useCallback(() => {
     const salon = /salon|beauty|barber|spa/i.test(categoryName);
@@ -122,6 +126,33 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   useEffect(()=>{reset();},[reset]);
   useEffect(()=>{void load();},[load]);
   useEffect(()=>{
+    if(moduleName!=="branches"||!selectedBranchId) return;
+    let active=true;
+    setBranchStatsLoading(true);
+    (async()=>{
+      try{
+        const [salesResult,stockResult,staffResult,expenseResult]=await Promise.all([
+          db.from("sales").select("total,status,created_at").eq("business_id",businessId).eq("branch_id",selectedBranchId).eq("status","completed"),
+          db.from("stock_balances").select("quantity").eq("business_id",businessId).eq("branch_id",selectedBranchId),
+          db.from("business_staff").select("id,status").eq("business_id",businessId).eq("branch_id",selectedBranchId),
+          db.from("expenses").select("amount").eq("business_id",businessId).eq("branch_id",selectedBranchId)
+        ]);
+        for(const result of [salesResult,stockResult,staffResult,expenseResult]) if(result.error) throw result.error;
+        const salesRows=salesResult.data??[];
+        const today=new Date().toLocaleDateString("en-CA",{timeZone:"Africa/Nairobi"});
+        if(active)setBranchStats({
+          sales:salesRows.reduce((sum:number,row:Row)=>sum+Number(row.total??0),0),
+          salesToday:salesRows.filter((row:Row)=>new Date(row.created_at).toLocaleDateString("en-CA",{timeZone:"Africa/Nairobi"})===today).reduce((sum:number,row:Row)=>sum+Number(row.total??0),0),
+          stock:(stockResult.data??[]).reduce((sum:number,row:Row)=>sum+Number(row.quantity??0),0),
+          employees:(staffResult.data??[]).filter((row:Row)=>row.status==="active").length,
+          expenses:(expenseResult.data??[]).reduce((sum:number,row:Row)=>sum+Number(row.amount??0),0)
+        });
+      }catch(e){if(active)setError(e instanceof Error?e.message:"Unable to load branch activity.");}
+      finally{if(active)setBranchStatsLoading(false);}
+    })();
+    return ()=>{active=false;};
+  },[moduleName,selectedBranchId,businessId,db]);
+  useEffect(()=>{
     let active=true;
     fetch("/api/business/payment-settings?business_id="+encodeURIComponent(businessId),{cache:"no-store"})
       .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||"Unable to load payment methods.");return data;})
@@ -136,7 +167,11 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     e.preventDefault();setSaving(true);setError("");setMessage("");
     try {
       let table="";let record:any={business_id:businessId};
-      if(moduleName==="branches"){table="branches";Object.assign(record,{name:form.name,address:form.address||null,phone:form.phone||null,opening_time:form.opening_time||null,closing_time:form.closing_time||null});}
+      if(moduleName==="branches"){
+        if(!editingId&&branches.filter(b=>b.status==="active").length>=5) throw new Error("This business has reached the five active branch limit.");
+        if(!form.name.trim()) throw new Error("Enter a branch name.");
+        table="branches";Object.assign(record,{name:form.name.trim(),address:form.address||null,phone:form.phone||null,opening_time:form.opening_time||null,closing_time:form.closing_time||null});
+      }
       if(moduleName==="catalog"){
         const name=form.name.trim();
         const cost=Number(form.cost_price||0), price=Number(form.selling_price||0), reorder=Number(form.reorder_level||0);
@@ -188,7 +223,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
           if(membershipUpdateError) throw membershipUpdateError;
         }
       }
-      reset();notify(editingId?"Changes saved.":"Record created.");await load();
+      reset();setShowBranchForm(false);notify(editingId?"Changes saved.":moduleName==="branches"?"Branch created successfully.":"Record created.");await load();
     } catch(e){setError(e instanceof Error?e.message:"Unable to save this record.");}
     finally{setSaving(false);}
   }
@@ -368,7 +403,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   }
 
   function renderForm(){
-    if(moduleName==="branches") return formPanel(<>{field("Branch name","name","text",true)}{field("Address / town","address")}{field("Phone","phone")}{field("Opening time","opening_time","time")}{field("Closing time","closing_time","time")}</>);
+    if(moduleName==="branches") return formPanel(<>{field("Branch name","name","text",true)}{field("Address / town","address")}{field("Phone","phone")}{field("Opening time","opening_time","time")}{field("Closing time","closing_time","time")}</>,save,editingId?"Save branch changes":"Create branch");
     if(moduleName==="catalog") return <>{!scannerOpen&&<div className="panel scanner-launch"><div><h2>Add products faster</h2><p className="muted">Scan barcodes, product labels or a whole handwritten stock list.</p></div><button type="button" className="btn" onClick={()=>setScannerOpen(true)}>Open Smart Product Scanner</button></div>}{scannerOpen&&<ProductScanner businessId={businessId} onComplete={()=>{void load();}} onClose={()=>setScannerOpen(false)}/>}{formPanel(<>{field("Product / service name","name","text",true)}{field("SKU / reference","sku")}{field("Barcode","barcode")}{select("Item type","item_type",[{value:"product",label:"Stocked product"},{value:"service",label:"Service / non-stock item"}],true)}{field("Category","category")}{field("Unit","unit")}{field("Cost price (KSh)","cost_price","number")}{field("Selling price (KSh)","selling_price","number")}{field("Reorder level","reorder_level","number")}{select("Track stock?","track_stock",[{value:"true",label:"Yes"},{value:"false",label:"No"}])}{field("Description","description")}</>)}</>;
     if(moduleName==="customers") return formPanel(<>{field("Customer name","name","text",true)}{field("Phone","phone")}{field("Email","email","email")}{field("Notes","notes")}</>);
     if(moduleName==="suppliers") return formPanel(<>{field("Supplier / company name","name","text",true)}{field("Contact person","contact_person")}{field("Phone","phone")}{field("Email","email","email")}{field("Address","address")}{field("Notes","notes")}</>);
@@ -390,7 +425,11 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   }
 
   function renderList(){
-    if(moduleName==="branches") return <table className="table"><thead><tr><th>Branch</th><th>Address</th><th>Phone</th><th>Opening hours</th><th>Status</th><th></th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{r.name}</td><td>{r.address??"—"}</td><td>{r.phone??"—"}</td><td>{r.opening_time??"—"} – {r.closing_time??"—"}</td><td>{r.status}</td><td>{r.status==="active"&&editActions(r)}</td></tr>)}</tbody></table>;
+    if(moduleName==="branches") return <div className="branch-card-grid">{rows.map(r=><article key={r.id} className="panel branch-card">
+      <div className="panelhead"><div><h2>{r.name}</h2><p className="muted">{r.address||"Location not added"}</p></div><span className={"pill "+(r.status!=="active"?"warn":"")}>{r.status==="active"?"Active":"Inactive"}</span></div>
+      <div className="branch-card-meta"><span>Phone: {r.phone||"Not added"}</span><span>Hours: {r.opening_time||"—"} – {r.closing_time||"—"}</span></div>
+      <div className="row-actions"><button type="button" className="btn" onClick={()=>{setSelectedBranchId(r.id);setShowBranchForm(false);}}>Open branch</button>{r.status==="active"&&<button type="button" className="btn secondary small" onClick={()=>edit(r)}>Edit details</button>}</div>
+    </article>)}</div>;
     if(moduleName==="catalog"){
       const query=catalogSearch.trim().toLowerCase();
       const catalogRows=rows.filter(r=>catalogView==="all"||(catalogView==="active"?r.is_active:!r.is_active))
@@ -421,7 +460,11 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   return <div className="layout"><BusinessNav active={moduleName}/><main className="main"><header className="dashhead"><strong>{businessName}</strong><span className="muted">{categoryName}</span></header><section className="dashcontent">
     <div className="eyebrow">{categoryName} workspace</div><h1>{TITLES[moduleName]}</h1><p className="sub">{DESCRIPTIONS[moduleName]}</p>
     {message&&<div className="success">{message}</div>}{error&&<div className="error" role="alert">{error}</div>}
-    {moduleName==="reports"?reportPanel():renderForm()}
+    {moduleName==="branches"&&<div className="branch-toolbar">
+      <div><strong>{branches.filter(b=>b.status==="active").length} of 5 active branches</strong><p className="muted">Open a location to review its recorded activity and team.</p></div>
+      <button type="button" className="btn" disabled={branches.filter(b=>b.status==="active").length>=5} onClick={()=>{reset();setShowBranchForm(true);setSelectedBranchId(null);}}>{branches.filter(b=>b.status==="active").length>=5?"Branch limit reached":"+ Add branch"}</button>
+    </div>}
+    {moduleName==="reports"?reportPanel():moduleName==="branches"?(showBranchForm?renderForm():null):renderForm()}
     <div className="panel"><div className="panelhead"><h2>{moduleName==="inventory"?"Current stock by branch":"Saved "+TITLES[moduleName].toLowerCase()}</h2><button className="btn secondary small" onClick={()=>void load()} disabled={loading}>Refresh</button></div>
       {moduleName==="catalog"&&<div className="catalog-tools">
         <div className="catalog-counts"><span><b>{rows.filter(r=>r.is_active).length}</b> active</span><span><b>{rows.filter(r=>!r.is_active).length}</b> inactive</span><span><b>{rows.filter(r=>r.item_type==="product").length}</b> products</span><span><b>{rows.filter(r=>r.item_type==="service").length}</b> services</span></div>
@@ -430,7 +473,29 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
           <label className="field"><span>Show items</span><select value={catalogView} onChange={e=>setCatalogView(e.target.value as "active"|"inactive"|"all")}><option value="active">Active items</option><option value="inactive">Inactive items</option><option value="all">All items</option></select></label>
         </div>
       </div>}
-      {loading?<div className="empty">Loading records…</div>:rows.length===0?<div className="empty">No records yet. Use the form above to add your first record.</div>:moduleName==="reports"?<div className="empty">Summary is calculated from saved transactions.</div>:<div className="table-wrap">{renderList()}</div>}
+      {loading?<div className="empty">Loading records…</div>:rows.length===0?<div className="empty">{moduleName==="branches"?"No branches have been added yet. Use Add branch to create your first location.":"No records yet. Use the form above to add your first record."}</div>:moduleName==="reports"?<div className="empty">Summary is calculated from saved transactions.</div>:moduleName==="branches"?renderList():<div className="table-wrap">{renderList()}</div>}
+      {moduleName==="branches"&&selectedBranchId&&(()=>{
+        const branch=branches.find(b=>b.id===selectedBranchId);
+        if(!branch)return null;
+        return <section className="panel branch-detail">
+          <div className="panelhead"><div><div className="eyebrow">Branch workspace</div><h2>{branch.name}</h2><p className="muted">{branch.address||"Location not added"} · {branch.phone||"No phone added"}</p></div><button type="button" className="btn secondary small" onClick={()=>setSelectedBranchId(null)}>Back to branches</button></div>
+          {branchStatsLoading?<div className="empty">Loading branch activity…</div>:<div className="stats branch-stats">
+            <div className="stat"><span>Today's sales</span><strong>{money(branchStats.salesToday)}</strong></div>
+            <div className="stat"><span>Recorded sales total</span><strong>{money(branchStats.sales)}</strong></div>
+            <div className="stat"><span>Stock units</span><strong>{branchStats.stock.toLocaleString("en-KE")}</strong></div>
+            <div className="stat"><span>Active employees</span><strong>{branchStats.employees}</strong></div>
+            <div className="stat"><span>Recorded expenses</span><strong>{money(branchStats.expenses)}</strong></div>
+          </div>}
+          <div className="branch-detail-grid">
+            <div><strong>Sales & POS</strong><p className="muted">Completed sales recorded at this branch.</p></div>
+            <div><strong>Inventory</strong><p className="muted">Current stock balances assigned to this branch.</p></div>
+            <div><strong>Employees</strong><p className="muted">Active team members assigned to this location.</p></div>
+            <div><strong>Expenses</strong><p className="muted">Expenses recorded against this branch.</p></div>
+          </div>
+          <div className="row-actions"><button type="button" className="btn secondary" onClick={()=>edit(branch)}>Edit branch details</button></div>
+          <p className="muted compact-help">These figures are calculated from Digi Biashara records for this branch. They are not live Safaricom or bank balances.</p>
+        </section>;
+      })()}
     </div>
     {moduleName==="inventory"&&<div className="panel"><h2>Stock tracking</h2><p className="muted">Sales reduce stock, received purchases increase stock, and manual adjustments create an auditable movement. Add stocked products in Products & services first.</p></div>}
     {moduleName==="staff"&&<div className="panel"><h2>Employee access rules</h2><p className="muted">Each employee signs in with the email and password set by the owner. Their workspace is limited to Sales / POS and their assigned branch. Deactivating a staff member also disables their business membership.</p></div>}
