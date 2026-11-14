@@ -1,17 +1,25 @@
 "use client";
-import {useState} from "react";
-import {createClient} from "@/lib/supabase/client";
+import {useState} from "react";import {createClient} from "@/lib/supabase/client";
 export default function ApplicationActions({id,status}:{id:string;status:string}){
  const[busy,setBusy]=useState(false);const[msg,setMsg]=useState("");
  async function update(next:"reviewing"|"approved"|"rejected"){
   setBusy(true);setMsg("");
   try{
-   const s=createClient();const{data:{user}}=await s.auth.getUser();
-   if(!user)throw new Error("Sign in again.");
+   const s=createClient();const{data:{user}}=await s.auth.getUser();if(!user)throw new Error("Sign in again.");
    if(next==="approved"){
-    const{data,error}=await s.functions.invoke("approve-agent-application",{body:{application_id:id}});
-    if(error)throw error;if(data?.error)throw new Error(data.error);
-    setMsg("Approved. Agent login: registered email + phone number as temporary password. They must change it at first login.");
+    const{data:app,error:readError}=await s.from("agent_applications").select("full_name,email,phone,county,town,agent_code").eq("id",id).single();
+    if(readError||!app)throw readError??new Error("Application not found.");
+    const{data:account,error:accountError}=await s.functions.invoke("register-business",{body:{
+      mode:"agent_account",email:app.email,password:app.phone,full_name:app.full_name,phone:app.phone,
+      territory:[app.county,app.town].filter(Boolean).join(", "),agent_code:app.agent_code
+    }});
+    if(accountError)throw accountError;if(account?.error)throw new Error(account.error);
+    const{error:updateError}=await s.from("agent_applications").update({
+      status:"approved",linked_agent_user_id:account.id,reviewed_by:user.id,
+      reviewed_at:new Date().toISOString(),approved_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    }).eq("id",id);
+    if(updateError)throw updateError;
+    setMsg("Approved. Login email is the registered email. New accounts use the phone number as temporary password; existing accounts keep their current password. Change it after signing in.");
    }else{
     const{error}=await s.from("agent_applications").update({status:next,reviewed_by:user.id,reviewed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",id);
     if(error)throw error;setMsg("Saved. Refresh the page to see the update.");
