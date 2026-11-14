@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PaymentsWorkspace from "./payments-workspace";
+import BusinessSuspensionGuard from "@/components/business-suspension-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -16,5 +17,5 @@ export default async function PaymentsPage() {
     .select("name,status,category:business_categories(name)").eq("id", membership.business_id).maybeSingle();
   if (!business || business.status !== "active") redirect("/admin/dashboard");
   const category = Array.isArray(business.category) ? business.category[0] : business.category;
-  return <PaymentsWorkspace businessId={membership.business_id} businessName={business.name} categoryName={category?.name ?? "Business"} />;
+  return <BusinessSuspensionGuard businessId={membership.business_id} businessName={business.name} audience="owner"><PaymentsWorkspace businessId={membership.business_id} businessName={business.name} categoryName={category?.name ?? "Business"} /></BusinessSuspensionGuard>;
 }
