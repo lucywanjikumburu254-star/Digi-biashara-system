@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PosReports from "./pos-reports";
+import BusinessSuspensionGuard from "@/components/business-suspension-guard";
 
 export default async function PosReportsPage() {
   const db = await createClient();
@@ -13,5 +14,5 @@ export default async function PosReportsPage() {
   if (!membership) redirect("/login");
   if (membership.role !== "owner" && membership.permissions?.sales !== true) redirect("/admin/sales");
   const business: any = membership.businesses;
-  return <PosReports businessId={membership.business_id} businessName={business?.name ?? "Business"} role={membership.role} assignedBranchId={membership.branch_id} />;
+  return <BusinessSuspensionGuard businessId={membership.business_id} businessName={business?.name ?? "Business"} audience={membership.role === "owner" ? "owner" : "staff"}><PosReports businessId={membership.business_id} businessName={business?.name ?? "Business"} role={membership.role} assignedBranchId={membership.branch_id} /></BusinessSuspensionGuard>;
 }
