@@ -40,6 +40,13 @@ async function getActor(businessId: string, allowEmployeeRead = false) {
   if (!isPlatformAdmin && !isOwner && !isAllowedMemberRead) {
     return { response: NextResponse.json({ error: "Only the business owner or Digi Biashara platform administrator can manage payment settings." }, { status: 403 }) };
   }
+  if (!isPlatformAdmin) {
+    const { data: business, error: businessError } = await session.from("businesses")
+      .select("status").eq("id", businessId).maybeSingle();
+    if (businessError || !business || business.status !== "active") {
+      return { response: NextResponse.json({ error: "This business workspace is suspended. Payment settings are unavailable until access is restored." }, { status: 423 }) };
+    }
+  }
   return { session, user, isPlatformAdmin, isOwner };
 }
 
