@@ -43,7 +43,10 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
       const nextStage = reminderStage(days);
       if (!nextStage) return;
 
-      const storageKey = `db-subscription-reminder:${businessId}:${due.toISOString()}:${nextStage}`;
+      const { data: { user } } = await db.auth.getUser();
+      if (!active || !user) return;
+      const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Nairobi" }).format(new Date());
+      const storageKey = `db-subscription-reminder:${businessId}:${user.id}:${today}`;
       try {
         if (window.localStorage.getItem(storageKey) === "shown") {
           if (interval) window.clearInterval(interval);
@@ -51,7 +54,7 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
         }
         window.localStorage.setItem(storageKey, "shown");
       } catch {
-        // The reminder remains available for this visit if browser storage is disabled.
+        // Fall back to one display per mounted workspace visit if browser storage is unavailable.
       }
 
       if (!active) return;
@@ -61,7 +64,7 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
       setAmountDue(Number(data.monthly_fee ?? 0));
       setVisible(true);
       if (interval) window.clearInterval(interval);
-      timeout = window.setTimeout(() => setVisible(false), 20_000);
+      timeout = window.setTimeout(() => setVisible(false), 10_000);
     };
 
     interval = window.setInterval(() => void checkSubscription(), 60_000);
@@ -99,7 +102,7 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
           <Link className="db-subscription-primary" href="/admin/billing" onClick={() => setVisible(false)}>View payment details</Link>
           <button type="button" className="db-subscription-later" onClick={() => setVisible(false)}>Remind me later</button>
         </div>
-        <div className="db-subscription-timer" aria-label="This reminder closes automatically after 20 seconds"><span /></div>
+        <div className="db-subscription-timer" aria-label="This reminder closes automatically after 10 seconds"><span /></div>
       </section>
     </div>
   );
