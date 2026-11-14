@@ -56,7 +56,8 @@ export default async function BusinessModulePage({ params }: { params: Promise<{
     );
   }
 
-  const subscription = Array.isArray((business as any).subscription) ? (business as any).subscription[0] : (business as any).subscription;\n  if (business.status !== "active" || ["suspended","cancelled"].includes(subscription?.status)) redirect("/admin/dashboard");
+  const subscription = Array.isArray((business as any).subscription) ? (business as any).subscription[0] : (business as any).subscription;
+  if (business.status !== "active" || ["suspended","cancelled"].includes(subscription?.status)) redirect("/admin/dashboard");
 
   const category = Array.isArray(business.category) ? business.category[0] : business.category;
 
