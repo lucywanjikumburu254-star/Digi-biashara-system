@@ -28,6 +28,7 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
     let active = true;
     let timeout: number | undefined;
     let interval: number | undefined;
+    let shownThisMount = false;
 
     const checkSubscription = async () => {
       const { data, error } = await db
@@ -57,7 +58,8 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
         // Fall back to one display per mounted workspace visit if browser storage is unavailable.
       }
 
-      if (!active) return;
+      if (!active || shownThisMount) return;
+      shownThisMount = true;
       setDueDate(due);
       setDaysLeft(days);
       setStage(nextStage);
