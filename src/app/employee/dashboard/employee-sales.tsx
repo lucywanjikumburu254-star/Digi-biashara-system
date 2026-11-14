@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import BrandLogo from "@/components/brand-logo";
 import SubscriptionReminderPopup from "@/components/subscription-reminder-popup";
+import BusinessSuspensionGuard from "@/components/business-suspension-guard";
 
 type Item = { id:string; name:string; selling_price:number; item_type:string; track_stock:boolean };
 type Customer = { id:string; name:string; phone:string|null };
@@ -110,7 +111,7 @@ export default function EmployeeSales({businessId,businessName,branchId,branchNa
     <div className="employee-sale-right"><strong>{money(Number(s.total))}</strong><span className={"employee-status "+(Number(s.balance)>0?"pending":s.payment_method?.startsWith("mpesa")?"verified":"complete")}>{Number(s.balance)>0?"Balance due":s.payment_method?.startsWith("mpesa")?"Recorded":"Completed"}</span><small>{methodName(s.payment_method)}</small></div>
   </article>)}</div>}
 
-  return <main className="employee-dashboard"><SubscriptionReminderPopup businessId={businessId} businessName={businessName}/>
+  return <BusinessSuspensionGuard businessId={businessId} businessName={businessName} audience="staff"><main className="employee-dashboard"><SubscriptionReminderPopup businessId={businessId} businessName={businessName}/>
     <header className="employee-mobile-header">
       <BrandLogo className="employee-brand-logo" />
       <div className="employee-header-right"><span className="employee-online-dot"/> <span>Online</span><form action="/logout" method="post"><button type="submit" aria-label="Sign out">↗</button></form></div>
@@ -174,5 +175,5 @@ export default function EmployeeSales({businessId,businessName,branchId,branchNa
       <button className={view==="profile"?"active":""} onClick={()=>nav("profile")}><span>♙</span>Profile</button>
       <form action="/logout" method="post"><button><span>↗</span>Logout</button></form>
     </nav>
-  </main>;
+  </main></BusinessSuspensionGuard>;
 }
