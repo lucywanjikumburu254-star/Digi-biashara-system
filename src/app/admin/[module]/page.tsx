@@ -42,7 +42,7 @@ export default async function BusinessModulePage({ params }: { params: Promise<{
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("name,status,category:business_categories(name)")
+    .select("name,status,category:business_categories(name),subscription:business_subscriptions(status)")
     .eq("id", membership.business_id)
     .maybeSingle();
 
@@ -56,7 +56,7 @@ export default async function BusinessModulePage({ params }: { params: Promise<{
     );
   }
 
-  if (business.status !== "active") redirect("/admin/dashboard");
+  const subscription = Array.isArray((business as any).subscription) ? (business as any).subscription[0] : (business as any).subscription;\n  if (business.status !== "active" || ["suspended","cancelled"].includes(subscription?.status)) redirect("/admin/dashboard");
 
   const category = Array.isArray(business.category) ? business.category[0] : business.category;
 
