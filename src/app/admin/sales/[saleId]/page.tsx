@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import PrintButton from "./print-button";
+import BusinessSuspensionGuard from "@/components/business-suspension-guard";
 
 export default async function SaleReceiptPage({params}:{params:Promise<{saleId:string}>}) {
   const {saleId}=await params;
@@ -20,7 +21,7 @@ export default async function SaleReceiptPage({params}:{params:Promise<{saleId:s
   const {data:cashier}=await db.from("business_staff").select("full_name").eq("business_id",membership.business_id).eq("user_id",sale.created_by).maybeSingle();
   const biz:any=membership.businesses;
   const branch:any=sale.branches;
-  return <main className="receipt-page">
+  return <BusinessSuspensionGuard businessId={membership.business_id} businessName={biz?.name??"Business"} audience={membership.role==="owner"?"owner":"staff"}><main className="receipt-page">
     <div className="receipt-toolbar no-print"><Link className="btn secondary small" href="/admin/sales">Back to sales</Link><PrintButton/></div>
     <article className="receipt">
       <header className="receipt-heading"><div className="logo">DIGI<em>BIASHARA</em></div><h1>Sales receipt</h1><strong>{biz?.name??"Business"}</strong>
@@ -32,5 +33,5 @@ export default async function SaleReceiptPage({params}:{params:Promise<{saleId:s
       {sale.notes&&<p className="receipt-notes">Notes: {sale.notes}</p>}
       <footer className="receipt-footer">Thank you for your business.</footer>
     </article>
-  </main>;
+  </main></BusinessSuspensionGuard>;
 }
