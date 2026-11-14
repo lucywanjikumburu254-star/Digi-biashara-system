@@ -140,6 +140,7 @@ export default function PosReports({ businessId, businessName, role, assignedBra
   }, [completedSales, payments]);
 
   const mpesaRows = paymentRows.filter((p) => p.method === "mpesa");
+  const nonMpesaRows = paymentRows.filter((p) => p.method !== "mpesa");
   const incoming = (rows: Row[]) => rows.filter((r) => r.direction === "in" && ["confirmed", "recorded"].includes(String(r.status).toLowerCase())).reduce((sum, r) => sum + r.amount, 0);
   const outgoing = (rows: Row[]) => rows.filter((r) => r.direction === "out" || ["refunded", "reversed"].includes(String(r.status).toLowerCase())).reduce((sum, r) => sum + r.amount, 0);
   const methodTotals = paymentRows.filter((p) => p.direction === "in" && ["confirmed", "recorded"].includes(String(p.status).toLowerCase())).reduce((map: Map<string, number>, p: Row) => map.set(p.method || "unspecified", (map.get(p.method || "unspecified") ?? 0) + p.amount), new Map<string, number>());
@@ -242,7 +243,6 @@ export default function PosReports({ businessId, businessName, role, assignedBra
                 <span>Amount paid: <strong>{money(sale.amount_paid)}</strong></span>
                 <span>Balance: <strong>{money(sale.balance)}</strong></span>
                 <span>Payment method: {String(sale.payment_method ?? "—").toUpperCase()}</span>
-                {sale.mpesa_transaction_code && <span>M-Pesa code: {sale.mpesa_transaction_code}</span>}
               </div>
             </div>;
           }) : <p className="report-empty">No completed sales recorded for this period.</p>}
@@ -251,8 +251,8 @@ export default function PosReports({ businessId, businessName, role, assignedBra
         {!mpesaOnly && <section className="report-section main-payment-section">
           <h2>5. Payment summary and recorded transactions (excluding M-Pesa statement)</h2>
           <div className="pos-report-stats">
-            <div><small>Incoming payments recorded</small><strong>{money(incoming(paymentRows))}</strong></div>
-            <div><small>Outgoing / refunds recorded</small><strong>{money(outgoing(paymentRows))}</strong></div>
+            <div><small>Incoming payments recorded</small><strong>{money(incoming(nonMpesaRows))}</strong></div>
+            <div><small>Outgoing / refunds recorded</small><strong>{money(outgoing(nonMpesaRows))}</strong></div>
             <div><small>Payment records</small><strong>{paymentRows.length}</strong></div>
             
           </div>
