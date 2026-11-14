@@ -43,7 +43,8 @@ async function getActor(businessId: string, allowEmployeeRead = false) {
   if (!isPlatformAdmin) {
     const { data: business, error: businessError } = await session.from("businesses")
       .select("status,subscription:business_subscriptions(status)").eq("id", businessId).maybeSingle();
-    const subscriptionAccess: any = Array.isArray((business as any)?.subscription) ? (business as any).subscription[0] : (business as any)?.subscription;\n    if (businessError || !business || business.status !== "active" || ["suspended", "cancelled"].includes(subscriptionAccess?.status)) {
+    const subscriptionAccess: any = Array.isArray((business as any)?.subscription) ? (business as any).subscription[0] : (business as any)?.subscription;
+    if (businessError || !business || business.status !== "active" || ["suspended", "cancelled"].includes(subscriptionAccess?.status)) {
       return { response: NextResponse.json({ error: "This business workspace is suspended. Payment settings are unavailable until access is restored." }, { status: 423 }) };
     }
   }
