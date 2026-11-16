@@ -715,3 +715,18 @@ html,body{background:#f3f6ff;color:#10204b}
 @keyframes digi-ai-in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:600px){.digi-ai-root{right:13px;bottom:calc(78px + env(safe-area-inset-bottom))}.digi-ai-launcher{min-height:49px;padding:0 15px;font-size:13px}.digi-ai-panel{position:fixed;left:0;right:0;bottom:0;width:100%;max-height:min(78dvh,720px);border-radius:20px 20px 0 0;padding-bottom:env(safe-area-inset-bottom)}}
 @media(prefers-reduced-motion:reduce){.digi-ai-panel,.digi-ai-launcher{animation:none;transition:none}}
+
+
+/* Digi Biashara PWA controls — reuse the existing brand tokens without changing the system palette. */
+.pwa-action{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));z-index:1400;display:flex;align-items:center;gap:12px;width:min(560px,calc(100vw - 28px));padding:13px 14px;border:1px solid var(--line);border-radius:14px;background:var(--paper);color:var(--ink);box-shadow:0 12px 38px #17152f24;transform:translateX(-50%)}
+.pwa-action-copy{display:grid;gap:3px;min-width:0;flex:1}
+.pwa-action-copy strong{font-size:13px}
+.pwa-action-copy small{color:var(--muted);font-size:11px;line-height:1.4}
+.pwa-action-button{flex-shrink:0;border:0;border-radius:9px;background:var(--green);color:#fff;padding:10px 14px;font-size:12px;font-weight:800}
+.pwa-action-close{flex-shrink:0;border:0;background:transparent;color:var(--muted);font-size:22px;line-height:1;padding:2px 4px}
+.pwa-modal-backdrop{position:fixed;inset:0;z-index:1450;display:grid;place-items:center;padding:20px;background:#17152f80}
+.pwa-modal{position:relative;width:min(420px,100%);padding:25px;border:1px solid var(--line);border-radius:16px;background:var(--paper);color:var(--ink);box-shadow:0 18px 60px #17152f30}
+.pwa-modal>strong{display:block;padding-right:25px;font-size:17px}
+.pwa-modal p{color:var(--muted);font-size:13px;line-height:1.65}
+.pwa-modal .pwa-action-close{position:absolute;right:13px;top:12px}
+@media(max-width:520px){.pwa-action{bottom:calc(12px + env(safe-area-inset-bottom));gap:8px;padding:11px}.pwa-action-copy strong{font-size:12px}.pwa-action-copy small{font-size:10px}.pwa-action-button{padding:9px 11px}}
