@@ -11,7 +11,7 @@ export default async function AgentsPage(){
  const {data:r}=await s.from("platform_roles").select("role").eq("user_id",user.id).eq("status","active").maybeSingle();if(r?.role!=="super_admin")redirect("/platform/login");
  const [{data:agents},{data:businesses},{data:applications},{data:commissions},{data:settings}]=await Promise.all([
   s.from("platform_roles").select("user_id,full_name,email,phone,agent_code,territory,status,created_at").eq("role","agent").order("created_at",{ascending:false}),
-  s.from("businesses").select("agent_user_id,id,status,subscription:business_subscriptions(status)").not("agent_user_id","is",null),
+  s.from("businesses").select("agent_user_id,id,status,subscription:business_subscriptions!business_subscriptions_business_id_fkey(status)").not("agent_user_id","is",null),
   s.from("agent_applications").select("*").order("created_at",{ascending:false}).limit(100),
   s.from("agent_commissions").select("id,agent_user_id,business_id,amount,currency_code,status,payment_reference,created_at,agent:platform_roles!agent_commissions_agent_user_id_fkey(full_name,agent_code),business:businesses!agent_commissions_business_id_fkey(name)").order("created_at",{ascending:false}).limit(200),
   s.from("agent_commission_settings").select("commission_amount").eq("id",true).maybeSingle()
