@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import BrandLogo from "@/components/brand-logo";
+import ShareAppButton from "@/components/share-app-button";
 
 type LoginPortal = "business" | "platform";
 
@@ -161,7 +162,7 @@ export function LoginForm({ portal }: { portal: LoginPortal }) {
     <main>
       <header className="top">
         <BrandLogo />
-        <span className="muted">{isPlatformPortal ? "Platform team access" : "Business account access"}</span>
+        <span className="login-header-actions"><span className="muted">{isPlatformPortal ? "Platform team access" : "Business account access"}</span>{!isPlatformPortal && <ShareAppButton className="btn secondary small" />}</span>
       </header>
       <section className="auth">
         <form className="authbox" onSubmit={submit}>
