@@ -11,8 +11,8 @@ export default async function PaymentReceiptPage({params}:{params:Promise<{payme
   const {data:membership}=await db.from("business_memberships").select("business_id").eq("user_id",user.id).eq("role","owner").eq("status","active").limit(1).maybeSingle();if(!membership)redirect("/login");
   const [{data:business},{data:payment},{data:allocations}]=await Promise.all([
     db.from("businesses").select("name,phone,location").eq("id",membership.business_id).maybeSingle(),
-    db.from("business_payments").select("*,customers(name,phone),suppliers(name,phone),branches(name,address,phone)").eq("business_id",membership.business_id).eq("id",paymentId).maybeSingle(),
-    db.from("payment_allocations").select("amount,business_invoices(invoice_number),purchases(purchase_number)").eq("business_id",membership.business_id).eq("payment_id",paymentId)
+    db.from("business_payments").select("*,customers!business_payments_business_id_customer_id_fkey(name,phone),suppliers!business_payments_business_id_supplier_id_fkey(name,phone),branches!business_payments_business_id_branch_id_fkey(name,address,phone)").eq("business_id",membership.business_id).eq("id",paymentId).maybeSingle(),
+    db.from("payment_allocations").select("amount,business_invoices!payment_allocations_business_id_invoice_id_fkey(invoice_number),purchases!payment_allocations_business_id_purchase_id_fkey(purchase_number)").eq("business_id",membership.business_id).eq("payment_id",paymentId)
   ]);
   if(!payment)notFound();const party=payment.customers??payment.suppliers;
   return <main className="receipt-page"><div className="receipt-toolbar no-print"><Link className="btn secondary small" href="/admin/payments">Back to payments</Link><PrintButton/></div><article className="receipt">
