@@ -13,7 +13,7 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     display_override: ["standalone", "minimal-ui"],
     background_color: "#fff8f0",
-    theme_color: "#870b35",
+    theme_color: "#0755e8",
     icons: [
       {
         src: "https://res.cloudinary.com/azrvy9ub/image/upload/f_png,c_pad,b_rgb:ffffff,w_192,h_192/v1794349210/1793911899888.jpg",
