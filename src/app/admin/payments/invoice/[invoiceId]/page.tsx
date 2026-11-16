@@ -11,8 +11,8 @@ export default async function InvoicePrintPage({params}:{params:Promise<{invoice
   const {data:membership}=await db.from("business_memberships").select("business_id").eq("user_id",user.id).eq("role","owner").eq("status","active").limit(1).maybeSingle();if(!membership)redirect("/login");
   const [{data:business},{data:invoice},{data:allocations}]=await Promise.all([
     db.from("businesses").select("name,phone,location").eq("id",membership.business_id).maybeSingle(),
-    db.from("business_invoices").select("*,customers(name,phone),branches(name,address,phone)").eq("business_id",membership.business_id).eq("id",invoiceId).maybeSingle(),
-    db.from("payment_allocations").select("amount,business_payments(status)").eq("business_id",membership.business_id).eq("invoice_id",invoiceId)
+    db.from("business_invoices").select("*,customers!business_invoices_business_id_customer_id_fkey(name,phone),branches!business_invoices_business_id_branch_id_fkey(name,address,phone)").eq("business_id",membership.business_id).eq("id",invoiceId).maybeSingle(),
+    db.from("payment_allocations").select("amount,business_payments!payment_allocations_business_id_payment_id_fkey(status)").eq("business_id",membership.business_id).eq("invoice_id",invoiceId)
   ]);
   if(!invoice)notFound();const paid=(allocations??[]).filter((a:any)=>a.business_payments?.status==="confirmed").reduce((s:number,a:any)=>s+Number(a.amount),0);const balance=Math.max(0,Number(invoice.total)-paid);
   return <main className="receipt-page"><div className="receipt-toolbar no-print"><Link className="btn secondary small" href="/admin/payments">Back to invoices</Link><PrintButton/></div><article className="receipt">
