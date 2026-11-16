@@ -24,7 +24,7 @@ export default function ShareAppButton({ className = "btn secondary" }: { classN
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") return;
       try {
-        await navigator.clipboard.writeText(APP_URL);
+        await navigator.clipboard.writeText(appUrl);
         setMessage("Link copied. Send it to your customers.");
       } catch {
         setMessage(appUrl);
