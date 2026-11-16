@@ -91,7 +91,7 @@ language sql
 stable
 security definer
 set search_path = ''
-as $
+as $$
   select exists (
     select 1
     from public.business_memberships bm
@@ -110,7 +110,7 @@ as $
           and s.status in ('suspended', 'cancelled')
       )
   );
-$;
+$$;
 
 -- A suspended business may read only its own account status so the owner can
 -- reach billing and staff can see the suspension screen.
