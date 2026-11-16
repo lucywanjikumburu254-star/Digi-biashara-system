@@ -8,7 +8,7 @@ export default async function BusinessesPage(){
  const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect("/login");
  const {data:role}=await s.from("platform_roles").select("role").eq("user_id",user.id).eq("status","active").maybeSingle();if(role?.role!=="super_admin")redirect("/login");
  const [{data:businesses},{data:groups},{data:categories},{data:agents}]=await Promise.all([
-  s.from("businesses").select("id,name,status,location,phone,category_id,created_at,category:business_categories(name),subscription:business_subscriptions(status,monthly_fee,due_at),agent:platform_roles!businesses_agent_user_id_fkey(full_name,agent_code)").order("created_at",{ascending:false}).limit(100),
+  s.from("businesses").select("id,name,status,location,phone,category_id,created_at,category:business_categories!businesses_category_id_fkey(name),subscription:business_subscriptions!business_subscriptions_business_id_fkey(status,monthly_fee,due_at),agent:platform_roles!businesses_agent_user_id_fkey(full_name,agent_code)").order("created_at",{ascending:false}).limit(100),
   s.from("category_groups").select("id,name").eq("status","active").order("sort_order"),
   s.from("business_categories").select("id,group_id,name").eq("status","active").order("sort_order"),
   s.from("platform_roles").select("user_id,full_name,agent_code").eq("role","agent").eq("status","active").order("full_name")
