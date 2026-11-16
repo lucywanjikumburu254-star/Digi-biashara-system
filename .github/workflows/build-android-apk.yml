@@ -6,7 +6,7 @@ on:
       app_url:
         description: "Website address loaded by the Android app"
         required: true
-        default: "https://digi-biashara-fresh.vercel.app"
+        default: "https://digi-biashara-fresh-git-feature-dara-446882-francis9271057-3716.vercel.app"
   push:
     branches:
       - feature/android-apk
@@ -42,7 +42,7 @@ jobs:
       - name: Generate Android project
         working-directory: android-wrapper
         env:
-          CAPACITOR_SERVER_URL: ${{ github.event.inputs.app_url || 'https://digi-biashara-fresh.vercel.app' }}
+          CAPACITOR_SERVER_URL: ${{ github.event.inputs.app_url || 'https://digi-biashara-fresh-git-feature-dara-446882-francis9271057-3716.vercel.app' }}
         run: |
           npx cap add android
           npx cap sync android
