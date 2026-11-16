@@ -2,7 +2,7 @@
 import {redirect} from "next/navigation";import {createClient} from "@/lib/supabase/server";import AgentBusinessForm from "./register-form";
 export default async function AgentBusinessesPage(){const s=await createClient();const {data:{user}}=await s.auth.getUser();if(!user)redirect("/login");const {data:role}=await s.from("platform_roles").select("role,full_name,agent_code,must_change_password").eq("user_id",user.id).eq("status","active").maybeSingle();if(role?.role!=="agent")redirect("/login");if(role.must_change_password)redirect("/agent/change-password");
  const [{data:businesses},{data:subs},{data:groups},{data:categories}]=await Promise.all([
- s.from("businesses").select("id,name,location,created_at,status,category:business_categories(name)").eq("agent_user_id",user.id).order("created_at",{ascending:false}),
+ s.from("businesses").select("id,name,location,created_at,status,category:business_categories!businesses_category_id_fkey(name)").eq("agent_user_id",user.id).order("created_at",{ascending:false}),
  s.from("agent_subscription_status").select("business_id,status,due_at,current_period_ends_at"),
  s.from("category_groups").select("id,name").eq("status","active").order("sort_order"),
  s.from("business_categories").select("id,group_id,name").eq("status","active").order("sort_order")
