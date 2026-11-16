@@ -690,3 +690,28 @@ html,body{background:#f3f6ff;color:#10204b}
 .db-suspension-help{font-size:13px;color:#64769b;line-height:1.6}
 .db-suspension-signout{margin-top:12px;padding:10px 18px;border:1px solid #dce7ff;border-radius:10px;background:#fff;color:#0755e8;font-size:12px;font-weight:850}
 @media(max-width:520px){.db-suspension-card{padding:27px 19px;border-radius:18px}.db-suspension-card h1{font-size:23px}}
+
+
+/* Floating Digi AI assistant */
+.digi-ai-root{position:fixed;right:22px;bottom:22px;z-index:1150;font-family:inherit}
+.digi-ai-launcher{display:flex;align-items:center;gap:9px;min-height:54px;padding:0 19px;border:0;border-radius:999px;background:linear-gradient(135deg,#1685ff,#0750db);color:#fff;font-weight:850;font-size:14px;box-shadow:0 9px 28px #0755e84a,0 0 0 4px #fff;transition:transform .16s,box-shadow .16s}
+.digi-ai-launcher:hover{transform:translateY(-2px);box-shadow:0 13px 32px #0755e855,0 0 0 4px #fff}
+.digi-ai-launcher-icon{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#ffffff26;font-size:19px}
+.digi-ai-panel{position:absolute;right:0;bottom:68px;display:flex;flex-direction:column;width:min(390px,calc(100vw - 28px));max-height:min(620px,calc(100dvh - 110px));overflow:hidden;border:1px solid #dce7ff;border-radius:20px;background:#fff;color:#10204b;box-shadow:0 22px 70px #082d7333;animation:digi-ai-in .18s ease-out}
+.digi-ai-header{display:flex;align-items:center;gap:10px;padding:15px 16px;background:linear-gradient(115deg,#082d73,#0755e8);color:#fff}
+.digi-ai-mark{display:grid;place-items:center;width:39px;height:39px;border-radius:12px;background:#ffffff24;font-size:23px}
+.digi-ai-heading{display:grid;gap:2px;flex:1}.digi-ai-heading strong{font-size:15px}.digi-ai-heading small{font-size:10px;color:#dbe8ff}
+.digi-ai-ready{font-size:9px;font-weight:900;letter-spacing:1px;color:#c7ffdf}
+.digi-ai-close{width:31px;height:31px;border:0;border-radius:9px;background:#ffffff20;color:#fff;font-size:22px}
+.digi-ai-body{overflow:auto;padding:17px 16px 12px}
+.digi-ai-intro strong{font-size:14px;color:#102d70}.digi-ai-intro p{margin:6px 0 15px;color:#64769b;font-size:12px;line-height:1.5}
+.digi-ai-suggestions{display:grid;gap:7px;margin-top:12px}.digi-ai-suggestions>strong{margin-bottom:2px;color:#8291ad;font-size:9px;letter-spacing:1.2px}
+.digi-ai-suggestions button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:10px 11px;border:1px solid #e1eaff;border-radius:10px;background:#f7f9ff;color:#17366f;text-align:left;font-size:11px;font-weight:700}
+.digi-ai-suggestions button:hover{border-color:#8eb7ff;background:#eef4ff}
+.digi-ai-suggestions button span{color:#0755e8;font-size:18px}
+.digi-ai-thread{display:grid;gap:10px;margin:8px 0}.digi-ai-exchange{display:grid;gap:7px}.digi-ai-user-message{justify-self:end;max-width:88%;padding:9px 12px;border-radius:13px 13px 3px 13px;background:#0755e8;color:#fff;font-size:11px}.digi-ai-notice{padding:10px 11px;border:1px solid #ffe2ad;border-radius:10px;background:#fff8e9;color:#77521c;font-size:10px;line-height:1.5}
+.digi-ai-compose{display:flex;align-items:center;gap:8px;padding:11px 13px;border-top:1px solid #e7edfa}.digi-ai-compose input{min-width:0;flex:1;height:40px;padding:0 11px;border:1px solid #dce7ff;border-radius:10px;outline:none;color:#10204b;font-size:12px}.digi-ai-compose input:focus{border-color:#0755e8;box-shadow:0 0 0 3px #0755e814}.digi-ai-compose button{width:40px;height:40px;border:0;border-radius:10px;background:#0755e8;color:#fff;font-size:17px}.digi-ai-compose button:disabled{opacity:.45;cursor:not-allowed}
+.digi-ai-footnote{margin:0;padding:0 14px 12px;color:#91a0ba;text-align:center;font-size:9px}
+@keyframes digi-ai-in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:600px){.digi-ai-root{right:13px;bottom:calc(78px + env(safe-area-inset-bottom))}.digi-ai-launcher{min-height:49px;padding:0 15px;font-size:13px}.digi-ai-panel{position:fixed;left:0;right:0;bottom:0;width:100%;max-height:min(78dvh,720px);border-radius:20px 20px 0 0;padding-bottom:env(safe-area-inset-bottom)}}
+@media(prefers-reduced-motion:reduce){.digi-ai-panel,.digi-ai-launcher{animation:none;transition:none}}
