@@ -30,16 +30,14 @@ function buildAnswer(question: string, data: Dataset, branchId: string, role: st
     : q.includes("this month") || q.includes("monthly") || q.includes("month") ? now.slice(0, 7) + "-01"
     : q.includes("last 30") || q.includes("30 days") ? addDays(now, -29)
     : now;
-  const periodEnd = q.includes("yesterday") ? now
-    : period.length === 7 ? (new Date(now + "T12:00:00Z").getUTCDate() ? addDays(now, 1) : addDays(now, 1))
-    : addDays(now, 1);
+  const periodEnd = q.includes("yesterday") ? now : addDays(now, 1);
   const periodSales = sales.filter(s => {
     const d = dateInNairobi(s.created_at);
     return d >= period && d < periodEnd;
   });
   const total = periodSales.reduce((n, s) => n + Number(s.total ?? 0), 0);
   const count = periodSales.length;
-  const periodLabel = q.includes("yesterday") ? "yesterday" : period.length === 7 ? "this month" : period === addDays(now, -6) ? "the last 7 days" : q.includes("last 30") || q.includes("30 days") ? "the last 30 days" : "today";
+  const periodLabel = q.includes("yesterday") ? "yesterday" : q.includes("this month") || q.includes("monthly") || q.includes("month") ? "this month" : q.includes("this week") || q.includes("weekly") || q.includes("last 7") ? "the last 7 days" : q.includes("last 30") || q.includes("30 days") ? "the last 30 days" : "today";
 
   if (q.includes("help") || q.includes("what can") || q.includes("what do you")) {
     return { text: "I can analyse the business records currently available to me.", detail: "Try asking about sales today, yesterday, this week or this month; best-selling products; slow-moving products; low stock; or branch performance. I do not currently analyse expenses, customer balances or appointments." };
@@ -89,12 +87,7 @@ function buildAnswer(question: string, data: Dataset, branchId: string, role: st
 ") : "There are no completed product sales in the loaded period.", detail: "Product ranking uses completed sales only and excludes service items. This is sales volume, not profit margin." };
   }
   if (q.includes("sales") || q.includes("revenue") || q.includes("sold") || q.includes("how much") || q.includes("income") || q.includes("performance")) {
-    const previousStart = period === now ? addDays(now,-1) : period === addDays(now,-6) ? addDays(period,-7) : period.slice(0,7)+"-01";
-    const previousEnd = period === now ? now : period === addDays(now,-6) ? period : period;
-    const previous = sales.filter(s => { const d=dateInNairobi(s.created_at); return d>=previousStart && d<previousEnd; });
-    const previousTotal = previous.reduce((n,s)=>n+Number(s.total??0),0);
-    const change = previousTotal > 0 ? ((total-previousTotal)/previousTotal)*100 : null;
-    return { text: "Completed sales "+periodLabel+": "+money(total)+" across "+count+" transactions. Average sale value: "+money(count ? total/count : 0)+".", detail: change === null ? "There is no comparable previous-period sales value available for a percentage comparison." : "Compared with the preceding period, recorded sales value changed by "+(change>=0?"+":"")+change.toFixed(1)+"%. Only completed sales are counted." };
+    return { text: "Completed sales "+periodLabel+": "+money(total)+" across "+count+" transactions. Average sale value: "+money(count ? total/count : 0)+".", detail: "Only completed POS sales recorded in Digi Biashara are counted. Sales value is not the same as net profit." };
   }
   if (q.includes("profit") || q.includes("margin") || q.includes("expense") || q.includes("cost") || q.includes("owe") || q.includes("debt") || q.includes("customer")) {
     return { text: "I don't yet have the verified calculations for that question.", detail: "This version currently analyses completed sales, product movement, recorded stock balances and branch sales. I won't estimate profit, expenses or customer debts without checking the correct source records." };
@@ -121,15 +114,18 @@ export default function DigiAiAssistant({ businessId, businessName, role, assign
       const today = todayKey();
       const from = startOf(addDays(today, -29));
       const until = endOf(today);
+      let branchQuery = db.from("branches").select("id,name").eq("business_id", businessId).order("name");
+      let stockQuery = db.from("stock_balances").select("product_id,branch_id,quantity").eq("business_id", businessId);
+      if (!owner && assignedBranchId) { branchQuery = branchQuery.eq("id", assignedBranchId); stockQuery = stockQuery.eq("branch_id", assignedBranchId); }
       const [branchResult, productResult, stockResult] = await Promise.all([
-        db.from("branches").select("id,name").eq("business_id", businessId).order("name"),
+        branchQuery,
         db.from("products").select("id,name,item_type,unit,reorder_level,track_stock").eq("business_id", businessId),
-        db.from("stock_balances").select("product_id,branch_id,quantity").eq("business_id", businessId),
+        stockQuery,
       ]);
       if (branchResult.error) throw branchResult.error;
       if (productResult.error) throw productResult.error;
       if (stockResult.error) throw stockResult.error;
-      const allowedBranches = owner ? (branchResult.data ?? []) : (branchResult.data ?? []).filter(b => b.id === assignedBranchId);
+      const allowedBranches = branchResult.data ?? [];
       setBranches(allowedBranches);
       let allSales: Row[] = [];
       for (let offset=0; ; offset+=500) {
@@ -148,12 +144,12 @@ export default function DigiAiAssistant({ businessId, businessName, role, assign
         if (result.error) throw result.error;
         allItems = allItems.concat(result.data ?? []);
       }
-      const visibleStock = owner || !assignedBranchId ? (stockResult.data ?? []) : (stockResult.data ?? []).filter(s=>s.branch_id===assignedBranchId);
+      const visibleStock = stockResult.data ?? [];
       const visibleSales = owner ? allSales : allSales.filter(s=>s.branch_id===assignedBranchId);
       const visibleIds = new Set(visibleSales.map(s=>s.id));
       const loaded: Dataset = { sales:visibleSales, items:allItems.filter(i=>visibleIds.has(i.sale_id)), products:productResult.data ?? [], stock:visibleStock, branches:allowedBranches, loadedAt:new Date().toISOString() };
       setDataset(loaded);
-      if (branchId !== "all" && owner && !allowedBranches.some(b=>b.id===branchId)) setBranchId("all");
+
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load business information.");
       setDataset(null);
