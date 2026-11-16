@@ -153,9 +153,30 @@ Deno.serve(async (req) => {
     }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Registration failed.";
+    // If the RPC response was interrupted after commit, recover the business
+    // ID from the owner's membership before asking anyone to retry.
+    if (createdUserId && (mode === "platform_business" || mode === "agent_business")) {
+      const { data: membership, error: membershipLookupError } = await admin
+        .from("business_memberships")
+        .select("business_id")
+        .eq("user_id", createdUserId)
+        .eq("role", "owner")
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      if (!membershipLookupError && membership?.business_id) {
+        return new Response(JSON.stringify({
+          success: true,
+          id: membership.business_id,
+          account_created: true,
+          partial_success: true,
+          warning: "The business owner membership was found after an interrupted registration response. Do not submit this registration again; review the business record and its category assignments.",
+        }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
+      }
+    }
     // The registration RPC may have committed even when its response was
-    // interrupted. Deleting this Auth user can orphan the committed business
-    // by cascading its owner membership. Keep the login and request review.
+    // interrupted. Deleting this Auth user can orphan the committed business.
+    // Keep the login and request review if no membership can be confirmed.
     if (createdUserId) {
       console.error("Registration stopped after creating an Auth user; login retained for safe recovery:", {
         mode,
