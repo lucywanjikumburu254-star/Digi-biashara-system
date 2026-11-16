@@ -58,8 +58,8 @@ export default function PosReports({ businessId, businessName, role, assignedBra
       if (customRange && customEnd < customStart) throw new Error("The end date must be on or after the start date.");
       const from = startIso(range.from);
       const until = endIso(range.to);
-      let salesQuery = db.from("sales").select("*,branches(name),customers(name)").eq("business_id", businessId).gte("created_at", from).lt("created_at", until).order("created_at", { ascending: false });
-      let paymentQuery = db.from("business_payments").select("*,branches(name)").eq("business_id", businessId).gte("payment_date", from).lt("payment_date", until).order("payment_date", { ascending: false });
+      let salesQuery = db.from("sales").select("*,branches!sales_business_id_branch_id_fkey(name),customers!sales_business_id_customer_id_fkey(name)").eq("business_id", businessId).gte("created_at", from).lt("created_at", until).order("created_at", { ascending: false });
+      let paymentQuery = db.from("business_payments").select("*,branches!business_payments_business_id_branch_id_fkey(name)").eq("business_id", businessId).gte("payment_date", from).lt("payment_date", until).order("payment_date", { ascending: false });
       if (branchId !== "all") { salesQuery = salesQuery.eq("branch_id", branchId); paymentQuery = paymentQuery.eq("branch_id", branchId); }
       const [salesResult, paymentResult, staffResult] = await Promise.all([
         salesQuery,
