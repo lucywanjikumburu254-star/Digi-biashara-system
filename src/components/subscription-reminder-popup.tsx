@@ -63,7 +63,7 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
       setAmountDue(Number(data.monthly_fee ?? 0));
       setVisible(true);
       if (interval) window.clearInterval(interval);
-      timeout = window.setTimeout(() => setVisible(false), 10_000);
+      timeout = window.setTimeout(() => setVisible(false), 20_000);
     };
 
     interval = window.setInterval(() => void checkSubscription(), 60_000);
@@ -101,7 +101,7 @@ export default function SubscriptionReminderPopup({ businessId, businessName }: 
           <Link className="db-subscription-primary" href="/admin/billing" onClick={() => setVisible(false)}>View payment details</Link>
           <button type="button" className="db-subscription-later" onClick={() => setVisible(false)}>Remind me later</button>
         </div>
-        <div className="db-subscription-timer" aria-label="This reminder closes automatically after 10 seconds"><span /></div>
+        <div className="db-subscription-timer" aria-label="This reminder closes automatically after 20 seconds"><span /></div>
       </section>
     </div>
   );
