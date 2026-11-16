@@ -10,7 +10,7 @@ export default async function EmployeeDashboard(){
   if(!user) redirect("/login");
 
   const {data:m,error}=await s.from("business_memberships")
-    .select("business_id,branch_id,permissions,businesses(name,status,subscription:business_subscriptions(status))")
+    .select("business_id,branch_id,permissions,businesses!business_memberships_business_id_fkey(name,status,subscription:business_subscriptions!business_subscriptions_business_id_fkey(status))")
     .eq("user_id",user.id).eq("role","employee").eq("status","active")
     .order("created_at",{ascending:true}).limit(1).maybeSingle();
 
