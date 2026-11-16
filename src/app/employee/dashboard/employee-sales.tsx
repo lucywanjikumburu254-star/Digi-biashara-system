@@ -44,7 +44,7 @@ export default function EmployeeSales({businessId,businessName,branchId,branchNa
       db.auth.getUser(),
       db.from("products").select("id,name,selling_price,item_type,track_stock").eq("business_id",businessId).eq("is_active",true).order("name"),
       db.from("customers").select("id,name,phone").eq("business_id",businessId).order("name"),
-      db.from("sales").select("id,sale_number,created_at,total,amount_paid,balance,payment_method,mpesa_transaction_code,customers(name)").eq("business_id",businessId).eq("branch_id",branchId).order("created_at",{ascending:false}).limit(40)
+      db.from("sales").select("id,sale_number,created_at,total,amount_paid,balance,payment_method,mpesa_transaction_code,customers!sales_business_id_customer_id_fkey(name)").eq("business_id",businessId).eq("branch_id",branchId).order("created_at",{ascending:false}).limit(40)
     ]);
     const failed=[p,c,s].find(x=>x.error);
     if(failed?.error) setError(failed.error.message);
