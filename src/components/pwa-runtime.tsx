@@ -111,6 +111,7 @@ export default function PwaRuntime() {
           <button type="button" className="pwa-action-button" onClick={installApp}>
             Install
           </button>
+          <ShareAppButton className="pwa-action-share" />
           <button type="button" className="pwa-action-close" aria-label="Dismiss install prompt" onClick={() => setInstallAvailable(false)}>
             ×
           </button>
