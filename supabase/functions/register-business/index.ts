@@ -23,16 +23,33 @@ Deno.serve(async (req) => {
 
   const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
   let createdUserId: string | null = null;
+  let result: string | null = null;
+  let mode: string | null = null;
+  let categoryIds: string[] = [];
   try {
     const body = await req.json();
-    const mode = body.mode;
+    mode = body.mode;
     const { data: roleRecord, error: roleError } = await caller.from("platform_roles").select("role,status").eq("user_id", user.id).eq("status", "active").maybeSingle();
     if (roleError) throw roleError;
     const allowed = mode === "agent_business" ? roleRecord?.role === "agent" : (mode === "platform_business" || mode === "agent_account") ? roleRecord?.role === "super_admin" : false;
     if (!allowed) throw new Error("You are not authorised to create this account or business.");
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
-    if (!email) throw new Error("Owner or agent email is required.");
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid owner or agent email address.");
+    const businessMode = mode === "platform_business" || mode === "agent_business";
+    if (businessMode) {
+      if (!String(body.business_name ?? "").trim()) throw new Error("Business name is required.");
+      if (!String(body.full_name ?? "").trim()) throw new Error("Owner full name is required.");
+      const requested = Array.isArray(body.category_ids) ? body.category_ids : [body.category_id];
+      categoryIds = [...new Set(requested.map((value: unknown) => String(value ?? "").trim()).filter(Boolean))];
+      if (!categoryIds.length) throw new Error("Select at least one business category before creating the owner login.");
+      body.category_id = categoryIds[0];
+      const monthlyFee = Number(body.monthly_fee ?? 3000);
+      if (!Number.isFinite(monthlyFee) || monthlyFee < 0) throw new Error("Enter a valid non-negative monthly subscription amount.");
+      body.monthly_fee = monthlyFee;
+    } else if (mode === "agent_account" && !String(body.full_name ?? "").trim()) {
+      throw new Error("Agent full name is required.");
+    }
 
     if (password) {
       if (password.length < 8) throw new Error("Password must contain at least 8 characters.");
@@ -75,7 +92,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    let result: string | null = null;
     if (mode === "platform_business") {
       const { data, error } = await caller.rpc("platform_register_business", {
         p_owner_email: email, p_owner_full_name: body.full_name,
@@ -104,21 +120,47 @@ Deno.serve(async (req) => {
       throw new Error("Unsupported registration type.");
     }
 
+    let warning: string | null = null;
     if ((mode === "platform_business" || mode === "agent_business") && result) {
-      const requested = Array.isArray(body.category_ids) ? body.category_ids : [body.category_id];
-      const categoryIds = [...new Set(requested.map((value: unknown) => String(value ?? "").trim()).filter(Boolean))];
-      if (!categoryIds.length) throw new Error("Select at least one business category.");
       const { error: categoryError } = await caller.rpc("set_business_category_assignments", {
         p_business_id: result,
         p_category_ids: categoryIds,
       });
-      if (categoryError) throw categoryError;
+      if (categoryError) {
+        // The business and owner already exist in a committed database
+        // transaction. Never report this as a failed registration that a
+        // user might retry and accidentally duplicate.
+        console.error("Business created but category assignment needs review:", categoryError);
+        warning = "The business and owner login were created, but the additional category assignments need administrator review. Do not submit this registration again.";
+      }
     }
 
-    return new Response(JSON.stringify({ success: true, id: result, account_created: Boolean(createdUserId) }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({
+      success: true,
+      id: result,
+      account_created: Boolean(createdUserId),
+      partial_success: Boolean(warning),
+      warning,
+    }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
   } catch (error) {
-    if (createdUserId) await admin.auth.admin.deleteUser(createdUserId);
     const message = error instanceof Error ? error.message : "Registration failed.";
-    return new Response(JSON.stringify({ error: message }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
+    // The registration RPC may have committed even when its response was
+    // interrupted. Deleting this Auth user can orphan the committed business
+    // by cascading its owner membership. Keep the login and request review.
+    if (createdUserId) {
+      console.error("Registration stopped after creating an Auth user; login retained for safe recovery:", {
+        mode,
+        userId: createdUserId,
+        message,
+      });
+    }
+    return new Response(JSON.stringify({
+      success: false,
+      error: message,
+      account_created: Boolean(createdUserId),
+      recovery_note: createdUserId
+        ? "An owner login was created and has been retained. Confirm whether the business was created before submitting a new registration."
+        : null,
+    }), { status: createdUserId ? 200 : 400, headers: { ...cors, "Content-Type": "application/json" } });
   }
 });

@@ -81,12 +81,19 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
   const load = useCallback(async () => {
     setLoading(true);setError("");
     try {
+      // Fetch only the supporting records needed by the module the owner opened.
+      const needsBranches = ["branches","sales","inventory","purchases","expenses","staff","appointments"].includes(moduleName);
+      const needsProducts = ["catalog","sales","inventory","purchases","appointments"].includes(moduleName);
+      const needsCustomers = ["customers","sales","appointments"].includes(moduleName);
+      const needsSuppliers = ["suppliers","purchases"].includes(moduleName);
+      const needsStaff = ["staff","appointments"].includes(moduleName);
+      const emptyResult = () => Promise.resolve({data:[],error:null} as any);
       const [br,pr,cu,su,st] = await Promise.all([
-        db.from("branches").select("*").eq("business_id",businessId).order("created_at"),
-        db.from("products").select("*").eq("business_id",businessId).eq("is_draft",false).order("name"),
-        db.from("customers").select("*").eq("business_id",businessId).order("name"),
-        db.from("suppliers").select("*").eq("business_id",businessId).order("name"),
-        db.from("business_staff").select("*,branches!business_staff_business_id_branch_id_fkey(name)").eq("business_id",businessId).order("full_name")
+        needsBranches ? db.from("branches").select("*").eq("business_id",businessId).order("created_at") : emptyResult(),
+        needsProducts ? db.from("products").select("*").eq("business_id",businessId).eq("is_draft",false).order("name") : emptyResult(),
+        needsCustomers ? db.from("customers").select("*").eq("business_id",businessId).order("name") : emptyResult(),
+        needsSuppliers ? db.from("suppliers").select("*").eq("business_id",businessId).order("name") : emptyResult(),
+        needsStaff ? db.from("business_staff").select("*,branches!business_staff_business_id_branch_id_fkey(name)").eq("business_id",businessId).order("full_name") : emptyResult()
       ]);
       for (const r of [br,pr,cu,su,st]) if(r.error) throw r.error;
       setBranches(br.data??[]);setProducts((pr.data??[]).filter((p:Row)=>p.is_active));setCustomers(cu.data??[]);setSuppliers(su.data??[]);setStaff(st.data??[]);
@@ -112,10 +119,14 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
         const r=await db.from("appointments").select("*,customers!appointments_business_id_customer_id_fkey(name,phone),products!appointments_business_id_service_id_fkey(name),branches!appointments_business_id_branch_id_fkey(name),business_staff!appointments_business_id_staff_id_fkey(full_name)").eq("business_id",businessId).order("starts_at",{ascending:true}).limit(150);
         if(r.error) throw r.error;data=r.data??[];
       } else if(moduleName==="reports") {
+        // Month-to-date summary; avoid downloading the business's full history.
+        const today=new Date().toLocaleDateString("en-CA",{timeZone:"Africa/Nairobi"});
+        const monthStart=`${today.slice(0,7)}-01`;
+        const monthStartTimestamp=`${monthStart}T00:00:00+03:00`;
         const [sr,er,prc]=await Promise.all([
-          db.from("sales").select("id,total,created_at").eq("business_id",businessId).eq("status","completed"),
-          db.from("expenses").select("amount,expense_date").eq("business_id",businessId),
-          db.from("purchases").select("total,created_at").eq("business_id",businessId).eq("status","received")
+          db.from("sales").select("id,total,created_at").eq("business_id",businessId).eq("status","completed").gte("created_at",monthStartTimestamp),
+          db.from("expenses").select("amount,expense_date").eq("business_id",businessId).gte("expense_date",monthStart),
+          db.from("purchases").select("total,created_at").eq("business_id",businessId).eq("status","received").gte("created_at",monthStartTimestamp)
         ]);
         for(const r of [sr,er,prc]) if(r.error) throw r.error;
         data=[{sales:sr.data??[],expenses:er.data??[],purchases:prc.data??[]}];
@@ -133,20 +144,22 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     setBranchStatsLoading(true);
     (async()=>{
       try{
+        const today=new Date().toLocaleDateString("en-CA",{timeZone:"Africa/Nairobi"});
+        const monthStart=`${today.slice(0,7)}-01`;
+        const monthStartTimestamp=`${monthStart}T00:00:00+03:00`;
         const [salesResult,stockResult,staffResult,expenseResult]=await Promise.all([
-          db.from("sales").select("total,status,created_at").eq("business_id",businessId).eq("branch_id",selectedBranchId).eq("status","completed"),
+          db.from("sales").select("total,created_at").eq("business_id",businessId).eq("branch_id",selectedBranchId).eq("status","completed").gte("created_at",monthStartTimestamp),
           db.from("stock_balances").select("quantity").eq("business_id",businessId).eq("branch_id",selectedBranchId),
-          db.from("business_staff").select("id,status").eq("business_id",businessId).eq("branch_id",selectedBranchId),
-          db.from("expenses").select("amount").eq("business_id",businessId).eq("branch_id",selectedBranchId)
+          db.from("business_staff").select("id",{count:"exact",head:true}).eq("business_id",businessId).eq("branch_id",selectedBranchId).eq("status","active"),
+          db.from("expenses").select("amount").eq("business_id",businessId).eq("branch_id",selectedBranchId).gte("expense_date",monthStart)
         ]);
         for(const result of [salesResult,stockResult,staffResult,expenseResult]) if(result.error) throw result.error;
         const salesRows=salesResult.data??[];
-        const today=new Date().toLocaleDateString("en-CA",{timeZone:"Africa/Nairobi"});
         if(active)setBranchStats({
           sales:salesRows.reduce((sum:number,row:Row)=>sum+Number(row.total??0),0),
           salesToday:salesRows.filter((row:Row)=>new Date(row.created_at).toLocaleDateString("en-CA",{timeZone:"Africa/Nairobi"})===today).reduce((sum:number,row:Row)=>sum+Number(row.total??0),0),
           stock:(stockResult.data??[]).reduce((sum:number,row:Row)=>sum+Number(row.quantity??0),0),
-          employees:(staffResult.data??[]).filter((row:Row)=>row.status==="active").length,
+          employees:staffResult.count??0,
           expenses:(expenseResult.data??[]).reduce((sum:number,row:Row)=>sum+Number(row.amount??0),0)
         });
       }catch(e){if(active)setError(e instanceof Error?e.message:"Unable to load branch activity.");}
@@ -455,9 +468,9 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     const revenue=(r.sales??[]).reduce((n:number,x:Row)=>n+Number(x.total),0);
     const cost=(r.expenses??[]).reduce((n:number,x:Row)=>n+Number(x.amount),0);
     const purchases=(r.purchases??[]).reduce((n:number,x:Row)=>n+Number(x.total),0);
-    const today=new Date().toISOString().slice(0,10);
+    const today=new Date().toLocaleDateString("en-CA",{timeZone:"Africa/Nairobi"});
     const todaySales=(r.sales??[]).filter((x:Row)=>String(x.created_at).slice(0,10)===today).reduce((n:number,x:Row)=>n+Number(x.total),0);
-    return <><div className="stats"><div className="stat"><span>Recorded sales</span><strong>{(r.sales??[]).length}</strong><small>{money(revenue)} total</small></div><div className="stat"><span>Today's sales</span><strong>{money(todaySales)}</strong></div><div className="stat"><span>Recorded expenses</span><strong>{money(cost)}</strong></div><div className="stat"><span>Stock purchases</span><strong>{money(purchases)}</strong></div></div><div className="panel"><h2>Cash movement summary</h2><p className="muted">Sales less recorded expenses and stock purchases. This is a management summary, not a statutory profit statement.</p><div className="report-net">{money(revenue-cost-purchases)}</div><small className="muted">Sales − expenses − purchases</small></div></>;
+    return <><div className="stats"><div className="stat"><span>Sales this month</span><strong>{(r.sales??[]).length}</strong><small>{money(revenue)} total</small></div><div className="stat"><span>Today's sales</span><strong>{money(todaySales)}</strong></div><div className="stat"><span>Expenses this month</span><strong>{money(cost)}</strong></div><div className="stat"><span>Stock purchases this month</span><strong>{money(purchases)}</strong></div></div><div className="panel"><h2>Cash movement summary (month to date)</h2><p className="muted">Sales less recorded expenses and stock purchases. This is a management summary, not a statutory profit statement.</p><div className="report-net">{money(revenue-cost-purchases)}</div><small className="muted">Sales − expenses − purchases</small></div></>;
   }
 
   return <BusinessSuspensionGuard businessId={businessId} businessName={businessName} audience="owner"><div className="layout"><SubscriptionReminderPopup businessId={businessId} businessName={businessName}/><BusinessNav active={moduleName}/><main className="main"><header className="dashhead"><strong>{businessName}</strong><span className="muted">{categoryName}</span></header><section className="dashcontent">
@@ -484,7 +497,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
           <div className="panelhead"><div><div className="eyebrow">Branch workspace</div><h2>{branch.name}</h2><p className="muted">{branch.address||"Location not added"} · {branch.phone||"No phone added"}</p></div><button type="button" className="btn secondary small" onClick={()=>setSelectedBranchId(null)}>Back to branches</button></div>
           {branchStatsLoading?<div className="empty">Loading branch activity…</div>:<div className="stats branch-stats">
             <div className="stat"><span>Today's sales</span><strong>{money(branchStats.salesToday)}</strong></div>
-            <div className="stat"><span>Recorded sales total</span><strong>{money(branchStats.sales)}</strong></div>
+            <div className="stat"><span>Sales this month</span><strong>{money(branchStats.sales)}</strong></div>
             <div className="stat"><span>Stock units</span><strong>{branchStats.stock.toLocaleString("en-KE")}</strong></div>
             <div className="stat"><span>Active employees</span><strong>{branchStats.employees}</strong></div>
             <div className="stat"><span>Recorded expenses</span><strong>{money(branchStats.expenses)}</strong></div>

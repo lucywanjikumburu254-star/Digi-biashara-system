@@ -56,7 +56,7 @@ export default function RegisterBusinessForm({groups,categories,agents}:{groups:
     business_name:business,category_id:categoryIds[0]||category,category_ids:categoryIds.length?categoryIds:[category],location,phone,agent_user_id:agent,monthly_fee:Number(fee)
    }});
    if(error)throw error;
-   if(data?.error)throw new Error(data.error);
+   if(data?.error)throw new Error(data.error+(data.recovery_note?" "+data.recovery_note:""));
    const accounts=[
     {account_type:"paybill",account_number:paybill,enabled:paybillEnabled,environment:paybillEnvironment,consumer_key:paybillKey,consumer_secret:paybillSecret,passkey:paybillPasskey},
     {account_type:"till",account_number:till,shortcode:tillShortcode,enabled:tillEnabled,environment:tillEnvironment,consumer_key:tillKey,consumer_secret:tillSecret,passkey:tillPasskey},
@@ -70,7 +70,7 @@ export default function RegisterBusinessForm({groups,categories,agents}:{groups:
     if(!response.ok) paymentMessage="Business created, but payment setup needs attention: "+(result.error||"Unable to save the payment details.");
     else paymentMessage="Business payment details saved securely.";
    }
-   setMessage("Business created. Business ID: "+data.id+(data.account_created?" Owner login created.":" Existing owner login linked.")+" "+paymentMessage);
+   setMessage("Business created. Business ID: "+data.id+(data.account_created?" Owner login created.":" Existing owner login linked.")+" "+paymentMessage+(data.warning?" IMPORTANT: "+data.warning:""));
    setOwnerEmail("");setOwnerPassword("");setOwnerName("");setBusiness("");setGroup("");setCategory("");setCategoryIds([]);setLocation("");setPhone("");setAgent("");
    setPaybillEnabled(false);setPaybill("");setPaybillKey("");setPaybillSecret("");setPaybillPasskey("");
    setTillEnabled(false);setTill("");setTillShortcode("");setTillKey("");setTillSecret("");setTillPasskey("");
