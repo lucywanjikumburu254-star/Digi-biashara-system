@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ShareAppButton from "@/components/share-app-button";
 
 type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
