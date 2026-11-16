@@ -10,11 +10,11 @@ export default async function SaleReceiptPage({params}:{params:Promise<{saleId:s
   const {data:{user}}=await db.auth.getUser();
   if(!user) redirect("/login");
   const {data:membership}=await db.from("business_memberships")
-    .select("business_id,role,branch_id,permissions,businesses(name,phone,location)")
+    .select("business_id,role,branch_id,permissions,businesses!business_memberships_business_id_fkey(name,phone,location)")
     .eq("user_id",user.id).eq("status","active").in("role",["owner","employee"]).order("created_at",{ascending:true}).limit(1).maybeSingle();
   if(!membership) redirect("/login");
   const {data:sale}=await db.from("sales")
-    .select("*,customers(name,phone),branches(name,address,phone),sale_items(item_name,quantity,unit_price,line_total)")
+    .select("*,customers!sales_business_id_customer_id_fkey(name,phone),branches!sales_business_id_branch_id_fkey(name,address,phone),sale_items!sale_items_business_id_sale_id_fkey(item_name,quantity,unit_price,line_total)")
     .eq("business_id",membership.business_id).eq("id",saleId).maybeSingle();
   if(!sale) notFound();
   if(membership.role!=="owner" && (membership.branch_id!==sale.branch_id || membership.permissions?.sales!==true)) notFound();
