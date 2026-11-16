@@ -14,7 +14,7 @@ The Supabase database reports 42 applied migration records, but the current Git 
 - Removes the redundant membership SELECT policy.
 - Combines agent commission SELECT access while preserving admin-only writes.
 - Splits customer owner/admin write permissions from the employee/owner/admin read policy.
-- Adds an index matching the agent commission list query.
+- Adds indexes matching the agent commission list and completed-sales dashboard count.
 
 ## Required staging tests before adoption
 

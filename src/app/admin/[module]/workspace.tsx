@@ -168,13 +168,14 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     return ()=>{active=false;};
   },[moduleName,selectedBranchId,businessId,db]);
   useEffect(()=>{
+    if(moduleName!=="sales"){setPaymentAccounts([]);return;}
     let active=true;
     fetch("/api/business/payment-settings?business_id="+encodeURIComponent(businessId),{cache:"no-store"})
       .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||"Unable to load payment methods.");return data;})
       .then(data=>{if(active){setPaymentAccounts((data.accounts??[]).filter((a:MpesaAccount)=>a.enabled));}})
       .catch(()=>{if(active)setPaymentAccounts([]);});
     return ()=>{active=false;};
-  },[businessId]);
+  },[businessId,moduleName]);
   const set = (key:string,value:string) => setForm(p=>({...p,[key]:value}));
   const notify = (s:string) => {setMessage(s);setError("");};
 
@@ -469,7 +470,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
     const cost=(r.expenses??[]).reduce((n:number,x:Row)=>n+Number(x.amount),0);
     const purchases=(r.purchases??[]).reduce((n:number,x:Row)=>n+Number(x.total),0);
     const today=new Date().toLocaleDateString("en-CA",{timeZone:"Africa/Nairobi"});
-    const todaySales=(r.sales??[]).filter((x:Row)=>String(x.created_at).slice(0,10)===today).reduce((n:number,x:Row)=>n+Number(x.total),0);
+    const todaySales=(r.sales??[]).filter((x:Row)=>new Date(x.created_at).toLocaleDateString("en-CA",{timeZone:"Africa/Nairobi"})===today).reduce((n:number,x:Row)=>n+Number(x.total),0);
     return <><div className="stats"><div className="stat"><span>Sales this month</span><strong>{(r.sales??[]).length}</strong><small>{money(revenue)} total</small></div><div className="stat"><span>Today's sales</span><strong>{money(todaySales)}</strong></div><div className="stat"><span>Expenses this month</span><strong>{money(cost)}</strong></div><div className="stat"><span>Stock purchases this month</span><strong>{money(purchases)}</strong></div></div><div className="panel"><h2>Cash movement summary (month to date)</h2><p className="muted">Sales less recorded expenses and stock purchases. This is a management summary, not a statutory profit statement.</p><div className="report-net">{money(revenue-cost-purchases)}</div><small className="muted">Sales − expenses − purchases</small></div></>;
   }
 

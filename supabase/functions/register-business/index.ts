@@ -44,6 +44,15 @@ Deno.serve(async (req) => {
       categoryIds = [...new Set(requested.map((value: unknown) => String(value ?? "").trim()).filter(Boolean))];
       if (!categoryIds.length) throw new Error("Select at least one business category before creating the owner login.");
       body.category_id = categoryIds[0];
+      const { data: activeCategories, error: categoryLookupError } = await caller
+        .from("business_categories")
+        .select("id")
+        .in("id", categoryIds)
+        .eq("status", "active");
+      if (categoryLookupError) throw categoryLookupError;
+      if ((activeCategories?.length ?? 0) !== categoryIds.length) {
+        throw new Error("One or more selected business categories are unavailable. Review the selection before creating the owner login.");
+      }
       const monthlyFee = Number(body.monthly_fee ?? 3000);
       if (!Number.isFinite(monthlyFee) || monthlyFee < 0) throw new Error("Enter a valid non-negative monthly subscription amount.");
       body.monthly_fee = monthlyFee;

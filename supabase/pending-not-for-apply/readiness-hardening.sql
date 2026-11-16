@@ -138,4 +138,9 @@ using (
 create index if not exists agent_commissions_agent_created_idx
   on public.agent_commissions (agent_user_id, created_at desc);
 
+-- The owner overview uses an exact count of completed sales for one business.
+create index if not exists sales_business_completed_idx
+  on public.sales (business_id)
+  where status = 'completed';
+
 commit;
