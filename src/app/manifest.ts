@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Digi Biashara",
     short_name: "Digi Biashara",
     description: "Business management for Kenyan businesses",
-    start_url: "/login",
+    start_url: "/open",
     scope: "/",
     display: "standalone",
     display_override: ["standalone", "minimal-ui"],
