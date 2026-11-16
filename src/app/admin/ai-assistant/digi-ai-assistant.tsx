@@ -50,9 +50,7 @@ function buildAnswer(question: string, data: Dataset, branchId: string, role: st
       const rows = branchPeriodSales.filter(s => s.branch_id === b.id);
       return { name: b.name, total: rows.reduce((n, s) => n + Number(s.total ?? 0), 0), count: rows.length };
     }).sort((a,b) => b.total-a.total);
-    return { text: totals.length ? "Branch performance for " + periodLabel + ":
-" + totals.map((b,i) => (i+1)+". "+b.name+" — "+money(b.total)+" ("+b.count+" completed sales)").join("
-") : "I couldn't find branch records for this business.", detail: "Based on completed POS sales recorded in Digi Biashara. This ranks sales value, not profit." };
+    return { text: totals.length ? "Branch performance for " + periodLabel + ":\n" + totals.map((b,i) => (i+1)+". "+b.name+" — "+money(b.total)+" ("+b.count+" completed sales)").join("\n") : "I couldn't find branch records for this business.", detail: "Based on completed POS sales recorded in Digi Biashara. This ranks sales value, not profit." };
   }
   if (q.includes("stock") || q.includes("restock") || q.includes("reorder") || q.includes("running out")) {
     const stockRows = data.stock.filter(s => !chosenBranch || s.branch_id === chosenBranch);
@@ -64,9 +62,7 @@ function buildAnswer(question: string, data: Dataset, branchId: string, role: st
       .map(p => ({ name: p.name, stock: stockByProduct.get(p.id) ?? 0, reorder: Number(p.reorder_level ?? 0), sold: soldByProduct.get(p.id) ?? 0 }))
       .filter(p => p.stock <= p.reorder || (p.sold > 0 && p.stock < p.sold / 4))
       .sort((a,b) => (a.stock-a.reorder) - (b.stock-b.reorder)).slice(0,10);
-    return { text: low.length ? "These products need a stock check:
-" + low.map(p => "• "+p.name+": "+p.stock+" in stock; reorder level "+p.reorder+"; "+p.sold+" sold in the loaded period").join("
-") : "No products currently meet the low-stock rules in the records I checked.", detail: "This is a warning based on recorded stock balances and product reorder levels. It does not create a purchase order. The loaded sales window is the last 30 days." };
+    return { text: low.length ? "These products need a stock check:\n" + low.map(p => "• "+p.name+": "+p.stock+" in stock; reorder level "+p.reorder+"; "+p.sold+" sold in the loaded period").join("\n") : "No products currently meet the low-stock rules in the records I checked.", detail: "This is a warning based on recorded stock balances and product reorder levels. It does not create a purchase order. The loaded sales window is the last 30 days." };
   }
   if (q.includes("best") || q.includes("top") || q.includes("selling") || q.includes("popular") || q.includes("slow") || q.includes("not moving")) {
     const totals = new Map<string, {name:string; qty:number; revenue:number}>();
@@ -83,10 +79,7 @@ function buildAnswer(question: string, data: Dataset, branchId: string, role: st
     const list = q.includes("slow") || q.includes("not moving")
       ? data.products.filter(p => p.item_type !== "service").map(p => ({ name:p.name, qty:totals.get(p.id)?.qty ?? 0, revenue:totals.get(p.id)?.revenue ?? 0 })).sort((a,b)=>a.qty-b.qty).slice(0,10)
       : ranked.slice(0,10);
-    return { text: list.length ? (q.includes("slow") || q.includes("not moving") ? "Products with the least recorded movement in the last 30 days:
-" : "Best-selling products in the last 30 days:
-") + list.map((p,i)=>(i+1)+". "+p.name+" — "+p.qty+" units; "+money(p.revenue)).join("
-") : "There are no completed product sales in the loaded period.", detail: "Product ranking uses completed sales only and excludes service items. This is sales volume, not profit margin." };
+    return { text: list.length ? (q.includes("slow") || q.includes("not moving") ? "Products with the least recorded movement in the last 30 days:\n" : "Best-selling products in the last 30 days:\n") + list.map((p,i)=>(i+1)+". "+p.name+" — "+p.qty+" units; "+money(p.revenue)).join("\n") : "There are no completed product sales in the loaded period.", detail: "Product ranking uses completed sales only and excludes service items. This is sales volume, not profit margin." };
   }
   if (q.includes("sales") || q.includes("revenue") || q.includes("sold") || q.includes("how much") || q.includes("income") || q.includes("performance")) {
     return { text: "Completed sales "+periodLabel+": "+money(total)+" across "+count+" transactions. Average sale value: "+money(count ? total/count : 0)+".", detail: "Only completed POS sales recorded in Digi Biashara are counted. Sales value is not the same as net profit." };
