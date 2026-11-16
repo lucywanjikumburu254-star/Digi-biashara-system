@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const membership = memberships.find((m: any) => m.role === "owner" || (m.role === "employee" && m.branch_id === body.branch_id && m.permissions?.sales === true));
     if (!membership) return NextResponse.json({ error: "You do not have permission to make POS sales for this branch." }, { status: 403 });
     const { data: businessAccess, error: accessError } = await session.from("businesses")
-      .select("status,subscription:business_subscriptions(status)").eq("id", membership.business_id).maybeSingle();
+      .select("status,subscription:business_subscriptions!business_subscriptions_business_id_fkey(status)").eq("id", membership.business_id).maybeSingle();
     const subscriptionAccess: any = Array.isArray((businessAccess as any)?.subscription) ? (businessAccess as any).subscription[0] : (businessAccess as any)?.subscription;
     if (accessError || !businessAccess || businessAccess.status !== "active" || ["suspended", "cancelled"].includes(subscriptionAccess?.status)) {
       return NextResponse.json({ error: "This business workspace is suspended. Complete subscription payment before starting a sale." }, { status: 423 });
