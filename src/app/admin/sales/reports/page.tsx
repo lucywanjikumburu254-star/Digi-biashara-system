@@ -8,7 +8,7 @@ export default async function PosReportsPage() {
   const { data: { user } } = await db.auth.getUser();
   if (!user) redirect("/login");
   const { data: membership } = await db.from("business_memberships")
-    .select("business_id,role,branch_id,permissions,businesses(name)")
+    .select("business_id,role,branch_id,permissions,businesses!business_memberships_business_id_fkey(name)")
     .eq("user_id", user.id).eq("status", "active").in("role", ["owner", "employee"])
     .order("created_at", { ascending: true }).limit(1).maybeSingle();
   if (!membership) redirect("/login");
