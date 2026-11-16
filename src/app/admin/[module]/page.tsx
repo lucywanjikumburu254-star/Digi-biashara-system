@@ -42,7 +42,7 @@ export default async function BusinessModulePage({ params }: { params: Promise<{
 
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .select("name,status,category:business_categories(name),subscription:business_subscriptions(status)")
+    .select("name,status,category:business_categories!businesses_category_id_fkey(name),subscription:business_subscriptions!business_subscriptions_business_id_fkey(status)")
     .eq("id", membership.business_id)
     .maybeSingle();
 
