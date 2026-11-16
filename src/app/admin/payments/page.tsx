@@ -14,7 +14,7 @@ export default async function PaymentsPage() {
     .order("created_at", { ascending: true }).limit(1).maybeSingle();
   if (error || !membership) redirect("/login");
   const { data: business } = await supabase.from("businesses")
-    .select("name,status,category:business_categories(name)").eq("id", membership.business_id).maybeSingle();
+    .select("name,status,category:business_categories!businesses_category_id_fkey(name)").eq("id", membership.business_id).maybeSingle();
   if (!business || business.status !== "active") redirect("/admin/dashboard");
   const category = Array.isArray(business.category) ? business.category[0] : business.category;
   return <BusinessSuspensionGuard businessId={membership.business_id} businessName={business.name} audience="owner"><PaymentsWorkspace businessId={membership.business_id} businessName={business.name} categoryName={category?.name ?? "Business"} /></BusinessSuspensionGuard>;
