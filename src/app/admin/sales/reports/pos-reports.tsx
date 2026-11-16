@@ -157,7 +157,7 @@ export default function PosReports({ businessId, businessName, role, assignedBra
 
   return <div className="layout"><BusinessNav active="sales-reports"/><main className="main"><div className={`pos-report-page ${mpesaOnly ? "mpesa-mode" : ""}`}>
     <div className="pos-report-toolbar no-print">
-      <Link className="btn secondary small" href="/admin/sales">← Back to POS</Link>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><Link className="btn secondary small" href="/admin/sales">← Back to POS</Link><Link className="btn secondary small" href="/admin/sales/daily-insights">Daily product insights</Link></div>
       <div className="pos-report-actions"><button className="btn secondary" type="button" onClick={() => void load()} disabled={loading}>Refresh report</button><button className="btn" type="button" onClick={() => printReport(false)} disabled={loading}>Download main report / Print</button><button className="btn secondary" type="button" onClick={() => printReport(true)} disabled={loading}>Download M-Pesa statement</button></div>
     </div>
 
