@@ -22,7 +22,8 @@ function buildAnswer(question: string, data: Dataset, branchId: string, role: st
   const isOwner = role === "owner" || role === "super_admin";
   const chosenBranch = branchId === "all" ? null : branchId;
   const sales = data.sales.filter(s => s.status === "completed" && (!chosenBranch || s.branch_id === chosenBranch));
-  const items = data.items.filter(i => sales.some(s => s.id === i.sale_id));
+  const visibleSaleIds = new Set(sales.map(s => s.id));
+  const items = data.items.filter(i => visibleSaleIds.has(i.sale_id));
   const saleMap = new Map(sales.map(s => [s.id, s]));
   const productMap = new Map(data.products.map(p => [p.id, p]));
   const period = q.includes("yesterday") ? addDays(now, -1)
@@ -116,7 +117,7 @@ export default function DigiAiAssistant({ businessId, businessName, role, assign
       const until = endOf(today);
       let branchQuery = db.from("branches").select("id,name").eq("business_id", businessId).order("name");
       let stockQuery = db.from("stock_balances").select("product_id,branch_id,quantity").eq("business_id", businessId);
-      if (!owner && assignedBranchId) { branchQuery = branchQuery.eq("id", assignedBranchId); stockQuery = stockQuery.eq("branch_id", assignedBranchId); }
+      if (!owner) { branchQuery = branchQuery.eq("id", assignedBranchId ?? "__no_assigned_branch__"); stockQuery = stockQuery.eq("branch_id", assignedBranchId ?? "__no_assigned_branch__"); }
       const [branchResult, productResult, stockResult] = await Promise.all([
         branchQuery,
         db.from("products").select("id,name,item_type,unit,reorder_level,track_stock").eq("business_id", businessId),
@@ -130,7 +131,7 @@ export default function DigiAiAssistant({ businessId, businessName, role, assign
       let allSales: Row[] = [];
       for (let offset=0; ; offset+=500) {
         let query = db.from("sales").select("id,total,status,created_at,branch_id").eq("business_id",businessId).eq("status","completed").gte("created_at",from).lt("created_at",until).order("created_at",{ascending:false}).range(offset,offset+499);
-        if (!owner && assignedBranchId) query = query.eq("branch_id",assignedBranchId);
+        if (!owner) query = query.eq("branch_id",assignedBranchId ?? "__no_assigned_branch__");
         const result = await query;
         if (result.error) throw result.error;
         const batch = result.data ?? [];
@@ -139,10 +140,11 @@ export default function DigiAiAssistant({ businessId, businessName, role, assign
       }
       const ids = allSales.map(s=>s.id);
       let allItems: Row[] = [];
-      for (let i=0;i<ids.length;i+=100) {
-        const result = await db.from("sale_items").select("id,sale_id,product_id,item_name,quantity,unit_price,line_total").eq("business_id",businessId).in("sale_id",ids.slice(i,i+100));
-        if (result.error) throw result.error;
-        allItems = allItems.concat(result.data ?? []);
+      for (let i=0;i<ids.length;i+=500) {
+        const batches = await Promise.all(Array.from({length:Math.ceil(Math.min(500,ids.length-i)/100)},(_,j)=>db.from("sale_items").select("id,sale_id,product_id,item_name,quantity,unit_price,line_total").eq("business_id",businessId).in("sale_id",ids.slice(i+j*100,i+(j+1)*100))));
+        const failed = batches.find(result=>result.error);
+        if (failed?.error) throw failed.error;
+        allItems = allItems.concat(...batches.map(result=>result.data ?? []));
       }
       const visibleStock = stockResult.data ?? [];
       const visibleSales = owner ? allSales : allSales.filter(s=>s.branch_id===assignedBranchId);
