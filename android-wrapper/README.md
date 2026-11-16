@@ -6,7 +6,7 @@ This folder packages the existing Digi Biashara website in a native Android shel
 
 1. Open the repository's **Actions** tab.
 2. Select **Build Digi Biashara Android APK**.
-3. Choose **Run workflow** and keep the production website URL unless you are deliberately testing another deployment.
+3. Choose **Run workflow** and keep the default verified preview URL for this test APK. Do not distribute this preview build to paying businesses.
 4. When the workflow completes, open its run and download the **Digi-Biashara-Android-APK** artifact.
 5. Extract the ZIP. The installable file is `Digi-Biashara-Android.apk`.
 6. Send that APK file through Xender, WhatsApp, Bluetooth, USB, or another file-sharing app.
