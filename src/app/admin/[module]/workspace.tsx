@@ -86,7 +86,7 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
         db.from("products").select("*").eq("business_id",businessId).eq("is_draft",false).order("name"),
         db.from("customers").select("*").eq("business_id",businessId).order("name"),
         db.from("suppliers").select("*").eq("business_id",businessId).order("name"),
-        db.from("business_staff").select("*,branches(name)").eq("business_id",businessId).order("full_name")
+        db.from("business_staff").select("*,branches!business_staff_business_id_branch_id_fkey(name)").eq("business_id",businessId).order("full_name")
       ]);
       for (const r of [br,pr,cu,su,st]) if(r.error) throw r.error;
       setBranches(br.data??[]);setProducts((pr.data??[]).filter((p:Row)=>p.is_active));setCustomers(cu.data??[]);setSuppliers(su.data??[]);setStaff(st.data??[]);
@@ -97,19 +97,19 @@ export default function Workspace({moduleName,businessId,businessName,categoryNa
       else if(moduleName==="suppliers") data=su.data??[];
       else if(moduleName==="staff") data=st.data??[];
       else if(moduleName==="sales") {
-        const r=await db.from("sales").select("*,customers(name),branches(name),sale_items(item_name,quantity,line_total)").eq("business_id",businessId).order("created_at",{ascending:false}).limit(100);
+        const r=await db.from("sales").select("*,customers!sales_business_id_customer_id_fkey(name),branches!sales_business_id_branch_id_fkey(name),sale_items!sale_items_business_id_sale_id_fkey(item_name,quantity,line_total)").eq("business_id",businessId).order("created_at",{ascending:false}).limit(100);
         if(r.error) throw r.error;data=r.data??[];
       } else if(moduleName==="inventory") {
-        const r=await db.from("stock_balances").select("*,products(name,sku,reorder_level,unit),branches(name)").eq("business_id",businessId).order("updated_at",{ascending:false});
+        const r=await db.from("stock_balances").select("*,products!stock_balances_business_id_product_id_fkey(name,sku,reorder_level,unit),branches!stock_balances_business_id_branch_id_fkey(name)").eq("business_id",businessId).order("updated_at",{ascending:false});
         if(r.error) throw r.error;data=r.data??[];
       } else if(moduleName==="purchases") {
-        const r=await db.from("purchases").select("*,suppliers(name),branches(name),purchase_items(quantity,line_total,products(name))").eq("business_id",businessId).order("created_at",{ascending:false}).limit(100);
+        const r=await db.from("purchases").select("*,suppliers!purchases_business_id_supplier_id_fkey(name),branches!purchases_business_id_branch_id_fkey(name),purchase_items!purchase_items_business_id_purchase_id_fkey(quantity,line_total,products!purchase_items_business_id_product_id_fkey(name))").eq("business_id",businessId).order("created_at",{ascending:false}).limit(100);
         if(r.error) throw r.error;data=r.data??[];
       } else if(moduleName==="expenses") {
-        const r=await db.from("expenses").select("*,branches(name)").eq("business_id",businessId).order("expense_date",{ascending:false}).limit(100);
+        const r=await db.from("expenses").select("*,branches!expenses_business_id_branch_id_fkey(name)").eq("business_id",businessId).order("expense_date",{ascending:false}).limit(100);
         if(r.error) throw r.error;data=r.data??[];
       } else if(moduleName==="appointments") {
-        const r=await db.from("appointments").select("*,customers(name,phone),products(name),branches(name),business_staff(full_name)").eq("business_id",businessId).order("starts_at",{ascending:true}).limit(150);
+        const r=await db.from("appointments").select("*,customers!appointments_business_id_customer_id_fkey(name,phone),products!appointments_business_id_service_id_fkey(name),branches!appointments_business_id_branch_id_fkey(name),business_staff!appointments_business_id_staff_id_fkey(full_name)").eq("business_id",businessId).order("starts_at",{ascending:true}).limit(150);
         if(r.error) throw r.error;data=r.data??[];
       } else if(moduleName==="reports") {
         const [sr,er,prc]=await Promise.all([
