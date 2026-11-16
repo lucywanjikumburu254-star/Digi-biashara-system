@@ -37,9 +37,9 @@ export default function PaymentsWorkspace({businessId,businessName,categoryName}
         db.from("customers").select("id,name,phone").eq("business_id",businessId).order("name"),
         db.from("suppliers").select("id,name,phone").eq("business_id",businessId).order("name"),
         db.from("branches").select("id,name").eq("business_id",businessId).eq("status","active").order("name"),
-        db.from("business_invoices").select("*,customers(name,phone),branches(name)").eq("business_id",businessId).order("created_at",{ascending:false}),
-        db.from("purchases").select("id,purchase_number,total,created_at,supplier_id,suppliers(name),branches(name)").eq("business_id",businessId).eq("status","received").order("created_at",{ascending:false}),
-        db.from("business_payments").select("*,customers(name),suppliers(name),branches(name)").eq("business_id",businessId).order("payment_date",{ascending:false}).limit(200),
+        db.from("business_invoices").select("*,customers!business_invoices_business_id_customer_id_fkey(name,phone),branches!business_invoices_business_id_branch_id_fkey(name)").eq("business_id",businessId).order("created_at",{ascending:false}),
+        db.from("purchases").select("id,purchase_number,total,created_at,supplier_id,suppliers!purchases_business_id_supplier_id_fkey(name),branches!purchases_business_id_branch_id_fkey(name)").eq("business_id",businessId).eq("status","received").order("created_at",{ascending:false}),
+        db.from("business_payments").select("*,customers!business_payments_business_id_customer_id_fkey(name),suppliers!business_payments_business_id_supplier_id_fkey(name),branches!business_payments_business_id_branch_id_fkey(name)").eq("business_id",businessId).order("payment_date",{ascending:false}).limit(200),
         db.from("payment_allocations").select("id,payment_id,invoice_id,purchase_id,amount").eq("business_id",businessId)
       ]);
       for(const r of [cu,su,br,iv,pu,pa,al]) if(r.error) throw r.error;
