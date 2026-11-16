@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     if (membershipError || !memberships?.length) return NextResponse.json({ error: "An active business membership is required." }, { status: 403 });
     const allowed = memberships.some((m: any) => m.role === "owner" || (m.role === "employee" && m.branch_id === branchId && m.permissions?.sales === true));
     const { data: businessAccess, error: accessError } = await session.from("businesses")
-      .select("status,subscription:business_subscriptions(status)").eq("id", businessId).maybeSingle();
+      .select("status,subscription:business_subscriptions!business_subscriptions_business_id_fkey(status)").eq("id", businessId).maybeSingle();
     const subscriptionAccess: any = Array.isArray((businessAccess as any)?.subscription) ? (businessAccess as any).subscription[0] : (businessAccess as any)?.subscription;
     if (accessError || !businessAccess || businessAccess.status !== "active" || ["suspended", "cancelled"].includes(subscriptionAccess?.status)) {
       return NextResponse.json({ error: "This business workspace is suspended. Complete subscription payment before recording sales." }, { status: 423 });
