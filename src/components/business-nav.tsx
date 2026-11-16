@@ -19,6 +19,7 @@ const items = [
   ["staff","Staff","/admin/staff"],
   ["appointments","Appointments","/admin/appointments"],
   ["reports","Reports","/admin/reports"],
+  ["digi-ai","Digi AI Assistant","/admin/ai-assistant"],
 ] as const;
 
 export default function BusinessNav({active}:{active:string}) {
