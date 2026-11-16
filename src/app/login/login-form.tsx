@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import BrandLogo from "@/components/brand-logo";
@@ -15,6 +15,68 @@ export function LoginForm({ portal }: { portal: LoginPortal }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const isPlatformPortal = portal === "platform";
+
+  // Supabase's browser session is persisted by the existing SSR client.
+  // When the installed PWA opens at /login, route an existing session directly
+  // to the correct workspace instead of asking the owner/staff member to sign in again.
+  useEffect(() => {
+    let active = true;
+
+    async function resumeSession() {
+      try {
+        const supabase = createClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!active || !session?.user) return;
+
+        const userId = session.user.id;
+        const { data: platformRole, error: platformRoleError } = await supabase
+          .from("platform_roles")
+          .select("role,must_change_password")
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .maybeSingle();
+
+        if (!active || platformRoleError) return;
+
+        if (platformRole?.role === "super_admin") {
+          router.replace("/platform/dashboard");
+          router.refresh();
+          return;
+        }
+        if (platformRole?.role === "agent") {
+          router.replace(platformRole.must_change_password ? "/agent/change-password" : "/agent/dashboard");
+          router.refresh();
+          return;
+        }
+
+        const { data: membership, error: membershipError } = await supabase
+          .from("business_memberships")
+          .select("role")
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .in("role", ["owner", "employee"])
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (!active || membershipError) return;
+        if (membership?.role === "owner") {
+          router.replace("/admin/dashboard");
+          router.refresh();
+        } else if (membership?.role === "employee") {
+          router.replace("/employee/dashboard");
+          router.refresh();
+        }
+      } catch {
+        // A missing/expired session leaves the normal sign-in form available.
+      }
+    }
+
+    void resumeSession();
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
