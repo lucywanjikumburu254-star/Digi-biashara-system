@@ -1,0 +1,69 @@
+name: Build Digi Biashara Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_url:
+        description: "Website address loaded by the Android app"
+        required: true
+        default: "https://digi-biashara-fresh.vercel.app"
+  push:
+    branches:
+      - feature/android-apk
+    paths:
+      - "android-wrapper/**"
+      - ".github/workflows/build-android-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: android-wrapper/package.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Capacitor
+        working-directory: android-wrapper
+        run: npm install --no-audit --no-fund
+
+      - name: Generate Android project
+        working-directory: android-wrapper
+        env:
+          CAPACITOR_SERVER_URL: ${{ github.event.inputs.app_url || 'https://digi-biashara-fresh.vercel.app' }}
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Build installable debug APK
+        working-directory: android-wrapper/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Rename APK
+        run: |
+          mkdir -p release
+          cp android-wrapper/android/app/build/outputs/apk/debug/app-debug.apk release/Digi-Biashara-Android.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Digi-Biashara-Android-APK
+          path: release/Digi-Biashara-Android.apk
+          if-no-files-found: error
+          retention-days: 30
