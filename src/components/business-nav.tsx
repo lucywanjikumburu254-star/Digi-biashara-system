@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import BrandLogo from "@/components/brand-logo";
+import DigiAiFloating from "@/components/digi-ai-floating";
 
 const items = [
   ["overview","Overview","/admin/dashboard"],
@@ -37,5 +38,6 @@ export default function BusinessNav({active}:{active:string}) {
       <Link tabIndex={open?0:-1} className={"navlink "+(active==="billing"?"active":"")} href="/admin/billing" onClick={()=>setOpen(false)}>Billing & subscription</Link>
       <form action="/logout" method="post"><button tabIndex={open?0:-1} type="submit" className="navlink" style={{width:"100%",textAlign:"left",border:0,background:"transparent",cursor:"pointer",font:"inherit"}}>Sign out</button></form>
     </aside>
+    <DigiAiFloating />
   </>;
 }
