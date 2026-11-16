@@ -29,7 +29,7 @@ export default function SubscriptionManagement({initial}:{initial:Sub[]}){
   <div className="panel">
    <div className="panelhead"><div><h2>Schedule automatic suspension</h2><p className="muted" style={{fontSize:12,margin:"5px 0 0"}}>Choose a shared date and time for selected businesses. Time is East Africa Time (EAT).</p></div></div>
    <div className="schedule-grid"><label className="field"><span>Suspension date and time (EAT)</span><input type="datetime-local" value={schedule} onChange={e=>setSchedule(e.target.value)}/></label><label className="field"><span>Trial length in days (for individual updates)</span><input type="number" min="0" max="365" value={trialDays} onChange={e=>setTrialDays(e.target.value)}/></label></div>
-   <div className="notice-info">Selected businesses receive an in-app payment reminder 24 hours before suspension. When the scheduled time arrives, the system automatically suspends their workspace. Their saved business data is retained.</div>
+   <div className="notice-info">Selected businesses receive in-app payment reminders at 10, 7, 3 and 1 day before suspension. When the scheduled time arrives, the system automatically suspends their workspace. Their saved business data is retained.</div>
    <div className="schedule-actions"><label><input type="checkbox" checked={selected.length===rows.filter(x=>x.status!=="suspended").length&&selected.length>0} onChange={e=>setSelected(e.target.checked?rows.filter(x=>x.status!=="suspended").map(x=>x.business_id):[])}/> Select all eligible ({rows.filter(x=>x.status!=="suspended").length})</label><button className="btn" disabled={busy||!selected.length} onClick={()=>void scheduleSelected()}>▦ Save schedule for {selected.length}</button></div>
   </div>
   <div className="panel">
