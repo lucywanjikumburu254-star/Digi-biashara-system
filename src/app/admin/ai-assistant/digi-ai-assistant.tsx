@@ -45,8 +45,9 @@ function buildAnswer(question: string, data: Dataset, branchId: string, role: st
   }
   if (q.includes("branch") && (q.includes("compare") || q.includes("best") || q.includes("perform") || q.includes("sales"))) {
     if (!isOwner) return { text: "Branch-wide comparisons are only available to business owners.", detail: "Your answers are limited to your assigned branch." };
+    const branchPeriodSales = data.sales.filter(s => { const d = dateInNairobi(s.created_at); return s.status === "completed" && d >= period && d < periodEnd; });
     const totals = data.branches.map(b => {
-      const rows = periodSales.filter(s => s.branch_id === b.id);
+      const rows = branchPeriodSales.filter(s => s.branch_id === b.id);
       return { name: b.name, total: rows.reduce((n, s) => n + Number(s.total ?? 0), 0), count: rows.length };
     }).sort((a,b) => b.total-a.total);
     return { text: totals.length ? "Branch performance for " + periodLabel + ":
