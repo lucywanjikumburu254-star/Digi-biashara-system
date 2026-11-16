@@ -765,3 +765,9 @@ html,body{background:#f3f6ff;color:#10204b}
   .pos-payment,.pos-items,.panel,.authbox{min-width:0}
 }
 @media(prefers-reduced-motion:reduce){.nav-drawer{transition:none}}
+
+.login-header-actions{display:flex;align-items:center;gap:10px;min-width:0}
+.login-header-actions .btn{white-space:nowrap}
+.pwa-action-share{flex-shrink:0;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);padding:9px 11px;font-size:11px;font-weight:800}
+.pwa-action-share .share-app-feedback{display:none}
+@media(max-width:520px){.login-header-actions>.muted{display:none}.login-header-actions{margin-left:auto}.pwa-action-share{padding:8px 9px;font-size:10px}}
