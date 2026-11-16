@@ -19,7 +19,7 @@ export default function manifest(): MetadataRoute.Manifest {
         src: "https://res.cloudinary.com/azrvy9ub/image/upload/f_png,c_pad,b_rgb:ffffff,w_192,h_192/v1794349210/1793911899888.jpg",
         sizes: "192x192",
         type: "image/png",
-        purpose: "any",
+        purpose: "any maskable",
       },
       {
         src: logo,
