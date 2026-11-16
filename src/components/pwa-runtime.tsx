@@ -92,10 +92,6 @@ export default function PwaRuntime() {
   }
 
   function refreshForUpdate() {
-    const waiting = navigator.serviceWorker?.controller
-      ? null
-      : undefined;
-    void waiting;
     navigator.serviceWorker.getRegistration("/").then((registration) => {
       if (!registration?.waiting) return;
       applyUpdate.current = true;
