@@ -22,8 +22,10 @@ export default function AgentActions({id,status,profileId,profileStatus}:{id:str
  }
  if(removed)return <div><span className="pill off">Removed</span><small className="muted" style={{display:"block"}}>Access revoked; history retained.</small></div>;
  return <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-  {status==="active"?<button className="btn small secondary" disabled={busy} onClick={()=>change("disabled")}>{busy?"Saving…":"Remove agent"}</button>:<button className="btn small" disabled={busy} onClick={()=>change("active")}>{busy?"Saving…":"Reactivate"}</button>}
+  {status!=="disabled"&&<button className="btn small secondary" disabled={busy} onClick={()=>change("disabled")}>{busy?"Saving…":"Remove agent"}</button>}
+  {status==="disabled"&&<button className="btn small" disabled={busy} onClick={()=>change("active")}>{busy?"Saving…":"Reactivate"}</button>}
   {status==="active"&&<button className="btn small secondary" disabled={busy} onClick={()=>change("suspended")}>Suspend</button>}
+  {status==="suspended"&&<button className="btn small" disabled={busy} onClick={()=>change("active")}>Reactivate</button>}
   {msg&&<small className="muted" style={{display:"block",maxWidth:240}}>{msg}</small>}
  </div>;
 }
