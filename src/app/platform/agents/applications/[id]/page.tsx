@@ -3,6 +3,7 @@ import {notFound,redirect} from "next/navigation";
 import Link from "next/link";
 import {createClient} from "@/lib/supabase/server";
 import ApplicationActions from "../../application-actions";
+import ApplicationEditor from "../../application-editor";
 
 export const dynamic="force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function AgentApplicationReviewPage({params}:{params:Promis
  <Link href="/platform/agents" className="btn secondary small">← Back to applications</Link>
  <div className="eyebrow" style={{marginTop:22}}>Applicant verification · {a.id.slice(0,8).toUpperCase()}</div><h1>{a.full_name}</h1><p className="sub">Review the applicant's details and identity documents before creating an agent login.</p>
  <div className="stats"><div className="stat"><span>Application status</span><strong style={{fontSize:18}}>{a.status}</strong></div><div className="stat"><span>Submitted</span><strong style={{fontSize:16}}>{fmt(a.created_at)}</strong></div><div className="stat"><span>Passport photo</span><strong style={{fontSize:16}}>{photoUrl?"Uploaded":"Missing / unavailable"}</strong></div><div className="stat"><span>National ID</span><strong style={{fontSize:16}}>{idUrl?"Uploaded":"Missing / unavailable"}</strong></div></div>
+ {a.status!=="approved"&&<ApplicationEditor application={a}/>}
  <div className="panel"><div className="panelhead"><h2>Applicant information</h2><span className="pill">{a.status}</span></div><div className="cards">
   <div><small className="muted">Full legal name</small><p><strong>{a.full_name}</strong></p></div><div><small className="muted">Email address</small><p>{a.email}</p></div><div><small className="muted">Phone / WhatsApp</small><p>{a.phone}</p></div><div><small className="muted">County / town</small><p>{a.county}{a.town?", "+a.town:""}</p></div><div><small className="muted">Languages / communication</small><p>{a.communication_skills||"—"}</p></div><div><small className="muted">Age confirmation</small><p>{a.age_confirmed?"Confirmed 18+":"Not confirmed"}</p></div><div><small className="muted">Smartphone access</small><p>{a.smartphone_access?"Yes":"No"}</p></div><div><small className="muted">Internet access</small><p>{a.internet_access?"Yes":"No"}</p></div>
  </div><div style={{marginTop:18}}><small className="muted">Previous experience</small><p style={{whiteSpace:"pre-wrap"}}>{a.experience||"Not provided"}</p><small className="muted">Why they want to become an agent</small><p style={{whiteSpace:"pre-wrap"}}>{a.motivation||"Not provided"}</p></div></div>
