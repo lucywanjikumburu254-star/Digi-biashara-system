@@ -21,7 +21,8 @@ export default function ApplicationActions({id,status,hasPassport,hasNationalId,
    if(readError||!app)throw readError??new Error("Application not found.");
    if(next==="approved"){
     if(app.status==="approved")throw new Error("This application has already been approved.");
-    if(!app.passport_photo_path||!app.national_id_image_path)throw new Error("Both passport photo and National ID must be uploaded.");\n    if(!app.age_confirmed)throw new Error("Confirm that the applicant is 18 or older before approving.");
+    if(!app.passport_photo_path||!app.national_id_image_path)throw new Error("Both passport photo and National ID must be uploaded.");
+    if(!app.age_confirmed)throw new Error("Confirm that the applicant is 18 or older before approving.");
     const bucket=s.storage.from("agent-application-documents");
     const[photo,idImage]=await Promise.all([
      bucket.createSignedUrl(app.passport_photo_path,60),
@@ -61,7 +62,8 @@ export default function ApplicationActions({id,status,hasPassport,hasNationalId,
    <input type="checkbox" checked={idChecked} disabled={!hasNationalId||busy} onChange={e=>setIdChecked(e.target.checked)}/>
    <span><strong>National ID reviewed</strong><small className="muted" style={{display:"block"}}>{hasNationalId?"I have opened and checked the uploaded National ID image.":"National ID image is missing or unavailable."}</small></span>
   </label>
-  {!ageConfirmed&&<div className="error" role="alert">Age confirmation is not checked. Update the application form before approval.</div>}\n  {msg&&<div className={msg.startsWith("Application approved")?"success":"error"} role="status">{msg}</div>}
+  {!ageConfirmed&&<div className="error" role="alert">Age confirmation is not checked. Update the application form before approval.</div>}
+  {msg&&<div className={msg.startsWith("Application approved")?"success":"error"} role="status">{msg}</div>}
   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:18}}>
    <button className="btn" disabled={busy||!documentsReady||!["pending","reviewing"].includes(status)} onClick={()=>update("approved")}>{busy?"Processing…":"Approve & create agent login"}</button>
    {status==="pending"&&<button className="btn secondary" disabled={busy} onClick={()=>update("reviewing")}>Mark under review</button>}
