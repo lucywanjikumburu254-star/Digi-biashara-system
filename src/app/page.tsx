@@ -32,7 +32,7 @@ export default function Home() {
         <div className="db-hero-glow" />
         <div className="db-copy">
           <div className="db-eyebrow"><span>🚀</span> The Complete Business Management Solution</div>
-          <h1><span className="db-3d-word">DigiBiashara</span><br/><span className="db-headline-dark">Grow Your Business</span><br/><span className="db-headline-wine">Smarter &amp; Faster</span></h1>
+          <h1><span className="db-3d-word">DigiBiashara</span><br/><span className="db-headline-dark">Grow Your Business</span><br/><span className="db-headline-blue">Smarter &amp; Faster</span></h1>
           <p className="db-intro">Manage your sales, stock, customers and more with ease. Built for Kenyan businesses.</p>
           <div className="db-feature-chips" aria-label="Key features">
             {features.map((feature) => (
