@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { CATEGORY_OPTIONS, PRODUCT_UNITS, optionsWithLegacy } from "@/lib/product-options";
 
 type Draft = { id: string; name: string; sku: string; barcode: string; category: string; unit: string; cost_price: string; selling_price: string; quantity: string; status?: string };
 type Mode = "barcode" | "photo" | "paper";
@@ -273,8 +274,8 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
       {drafts.map(d => <div className="scanner-draft" key={d.id}>
         <label className="field"><span>Product name</span><input value={d.name} onChange={e => changeDraft(d.id, "name", e.target.value)} /></label>
         <label className="field"><span>Barcode</span><input value={d.barcode} onChange={e => changeDraft(d.id, "barcode", e.target.value)} /></label>
-        <label className="field"><span>Category</span><input value={d.category} onChange={e => changeDraft(d.id, "category", e.target.value)} /></label>
-        <label className="field"><span>Unit</span><input value={d.unit} onChange={e => changeDraft(d.id, "unit", e.target.value)} /></label>
+        <label className="field"><span>Category</span><select required value={d.category} onChange={e => changeDraft(d.id, "category", e.target.value)}><option value="">Choose category</option>{optionsWithLegacy(CATEGORY_OPTIONS, d.category).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+        <label className="field"><span>Unit</span><select required value={d.unit} onChange={e => changeDraft(d.id, "unit", e.target.value)}>{optionsWithLegacy(PRODUCT_UNITS, d.unit).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         <label className="field"><span>Quantity on paper</span><input type="number" min="0" step="0.001" value={d.quantity} onChange={e => changeDraft(d.id, "quantity", e.target.value)} /></label>
         <label className="field"><span>Buying price (KSh)</span><input type="number" min="0" step="0.01" value={d.cost_price} onChange={e => changeDraft(d.id, "cost_price", e.target.value)} /></label>
         <label className="field"><span>Selling price (KSh)</span><input type="number" min="0" step="0.01" value={d.selling_price} onChange={e => changeDraft(d.id, "selling_price", e.target.value)} /></label>
