@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PRODUCT_CATEGORIES, PRODUCT_UNITS, isProductCategory, isProductUnit, normaliseProductCategory, normaliseProductUnit } from "@/lib/product-options";
 
 type Draft = { id: string; name: string; sku: string; barcode: string; category: string; unit: string; cost_price: string; selling_price: string; quantity: string; status?: string };
 type Mode = "barcode" | "photo" | "paper";
@@ -69,7 +70,7 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
         if (json.status === 1 && json.product) details = json.product;
       } catch { /* external lookup is optional; manual barcode entry remains available */ }
       const name = details.product_name || details.product_name_en || "";
-      const row: Draft = { id: "new-" + Date.now(), name, sku: "", barcode: clean, category: details.categories?.split(",")[0]?.trim() || "", unit: "piece", cost_price: "", selling_price: "", quantity: "0" };
+      const row: Draft = { id: "new-" + Date.now(), name, sku: "", barcode: clean, category: normaliseProductCategory(details.categories?.split(",")[0]), unit: "piece", cost_price: "", selling_price: "", quantity: "0" };
       if (!name) {
         setDrafts(prev => [...prev, row]);
         setNotice("Barcode captured. No matching product was found in the external catalogue, so enter the product name and details below.");
@@ -106,6 +107,8 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
     setBusy(true); setProblem(""); setNotice("");
     try {
       if (!draft.name.trim()) throw new Error("Enter the product name.");
+      if (!isProductCategory(draft.category)) throw new Error("Select a product category from the list.");
+      if (!isProductUnit(draft.unit)) throw new Error("Select a unit of measure from the list.");
       const openingQty = Number(draft.quantity || 0);
       if (openingQty > 0 && !selectedBranch) throw new Error("Choose the branch where this opening stock belongs before activating the product.");
       let id = draft.id;
@@ -179,8 +182,8 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
       name: String(p.name || "").slice(0, 180),
       sku: String(p.sku || ""),
       barcode: String(p.barcode || ""),
-      category: [p.brand, p.category].filter(Boolean).join(" · "),
-      unit: String(p.unit || "piece"),
+      category: normaliseProductCategory(p.category),
+      unit: normaliseProductUnit(p.unit),
       quantity: /^\d+(?:\.\d+)?$/.test(String(p.quantity || "")) ? String(p.quantity) : "0",
       cost_price: /^\d+(?:\.\d+)?$/.test(String(p.cost_price || "")) ? String(p.cost_price) : "",
       selling_price: /^\d+(?:\.\d+)?$/.test(String(p.selling_price || "")) ? String(p.selling_price) : "",
@@ -273,8 +276,8 @@ export default function ProductScanner({ businessId, onComplete, onClose }: { bu
       {drafts.map(d => <div className="scanner-draft" key={d.id}>
         <label className="field"><span>Product name</span><input value={d.name} onChange={e => changeDraft(d.id, "name", e.target.value)} /></label>
         <label className="field"><span>Barcode</span><input value={d.barcode} onChange={e => changeDraft(d.id, "barcode", e.target.value)} /></label>
-        <label className="field"><span>Category</span><input value={d.category} onChange={e => changeDraft(d.id, "category", e.target.value)} /></label>
-        <label className="field"><span>Unit</span><input value={d.unit} onChange={e => changeDraft(d.id, "unit", e.target.value)} /></label>
+        <label className="field"><span>Category</span><select required value={d.category} onChange={e => changeDraft(d.id, "category", e.target.value)}><option value="">Select product category</option>{!isProductCategory(d.category)&&d.category&&<option value={d.category}>Previously saved: {d.category}</option>}{PRODUCT_CATEGORIES.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+        <label className="field"><span>Unit</span><select required value={d.unit} onChange={e => changeDraft(d.id, "unit", e.target.value)}><option value="">Select unit of measure</option>{!isProductUnit(d.unit)&&d.unit&&<option value={d.unit}>Previously saved: {d.unit}</option>}{PRODUCT_UNITS.map(unit => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</select></label>
         <label className="field"><span>Quantity on paper</span><input type="number" min="0" step="0.001" value={d.quantity} onChange={e => changeDraft(d.id, "quantity", e.target.value)} /></label>
         <label className="field"><span>Buying price (KSh)</span><input type="number" min="0" step="0.01" value={d.cost_price} onChange={e => changeDraft(d.id, "cost_price", e.target.value)} /></label>
         <label className="field"><span>Selling price (KSh)</span><input type="number" min="0" step="0.01" value={d.selling_price} onChange={e => changeDraft(d.id, "selling_price", e.target.value)} /></label>
