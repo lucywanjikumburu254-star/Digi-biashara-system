@@ -205,3 +205,10 @@ export function isProductCategory(value: unknown): boolean {
 export function isProductUnit(value: unknown): boolean {
   return PRODUCT_UNITS.some(unit => unit.value === String(value ?? "").trim());
 }
+
+export function normaliseProductUnit(value: unknown): string {
+  const input = String(value ?? "").trim();
+  if (!input) return "piece";
+  const match = PRODUCT_UNITS.find(unit => unit.value.toLowerCase() === input.toLowerCase() || unit.label.toLowerCase() === input.toLowerCase());
+  return match?.value ?? "piece";
+}
