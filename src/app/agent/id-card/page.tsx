@@ -1,0 +1,31 @@
+import {redirect,notFound} from "next/navigation";
+import {headers} from "next/headers";
+import {createClient} from "@/lib/supabase/server";
+import PrintIdButton from "./print-button";
+
+export const dynamic="force-dynamic";
+
+export default async function AgentOwnIdCardPage(){
+ const s=await createClient();
+ const {data:{user}}=await s.auth.getUser();
+ if(!user)redirect("/platform/login");
+ const {data:role}=await s.from("platform_roles").select("role,status,full_name").eq("user_id",user.id).maybeSingle();
+ if(role?.role!=="agent"||role.status!=="active")redirect("/platform/login");
+ const {data:a}=await s.from("platform_agent_profiles").select("id,linked_user_id,full_name,agent_code,job_number,county,town,status,verification_token,passport_photo_path").eq("linked_user_id",user.id).eq("status","active").maybeSingle();
+ if(!a)notFound();
+ const {data:photo}=a.passport_photo_path?await s.storage.from("agent-application-documents").createSignedUrl(a.passport_photo_path,600):{data:null};
+ const h=await headers();const host=h.get("x-forwarded-host")||h.get("host");const proto=h.get("x-forwarded-proto")||"https";
+ const base=host?proto+"://"+host:(process.env.NEXT_PUBLIC_SITE_URL||"https://digi-biashara-fresh.vercel.app");
+ const verifyUrl=base+"/verify/agent/"+a.verification_token;
+ const qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=2&data="+encodeURIComponent(verifyUrl);
+ return <main style={{fontFamily:"Arial,sans-serif",padding:24,color:"#102a43"}}>
+  <div className="no-print" style={{display:"flex",gap:12,marginBottom:20,alignItems:"center",flexWrap:"wrap"}}><PrintIdButton/><a href="/agent/dashboard">Back to agent workspace</a></div>
+  <h1 className="no-print" style={{fontSize:22}}>Your Digi Biashara Agent ID</h1>
+  <p className="no-print" style={{color:"#64748b",marginBottom:20}}>Select “Print / Save as PDF” to download or save your ID card, then share the PDF with businesses you visit.</p>
+  <div className="sheet">
+   <section className="card front"><div className="brand">DIGI <span>BIASHARA</span></div><div className="issuer">UNDER DIGITAL KINGDOM SOLUTIONS</div><div className="content">{photo?.signedUrl?<img className="portrait" src={photo.signedUrl} alt="Your agent portrait"/>:<div className="portrait placeholder">PHOTO</div>}<div className="details"><h2>{a.full_name}</h2><p className="agentid">{a.agent_code}</p><p>JOB NO. {a.job_number}</p><p>{a.county}{a.town?", "+a.town:""}</p><p className="state">ACTIVE</p></div></div><div className="foot">COMPANY-ISSUED AGENT IDENTIFICATION</div></section>
+   <section className="card back"><div className="brand">SCAN TO VERIFY</div><div className="backbody"><img className="qr" src={qrUrl} alt="QR code for live agent verification"/><div><strong>Verified Digi Biashara Agent</strong><p>Scan to view this agent's details and confirm current authorisation under Digital Kingdom Solutions.</p><p><strong>Issued by:</strong><br/>Digital Kingdom Solutions</p><p><strong>Contact:</strong> 0183873232</p></div></div><div className="disclaimer">Valid only while the live verification page shows ACTIVE. This is not a government ID.</div></section>
+  </div>
+  <style>{`@page{size:A4;margin:18mm} .sheet{display:flex;flex-direction:column;gap:12mm;align-items:flex-start}.card{width:85.6mm;height:54mm;box-sizing:border-box;border:1px solid #b7c6d4;border-radius:4mm;padding:4mm 5mm;overflow:hidden;position:relative;page-break-inside:avoid;background:white}.brand{font-size:15px;font-weight:900;color:#0f766e;letter-spacing:.4px}.brand span{color:#102a43}.issuer{font-size:7px;letter-spacing:1.2px;color:#64748b;margin-top:1mm}.content{display:flex;gap:4mm;margin-top:3mm}.portrait{width:23mm;height:29mm;object-fit:cover;border:1px solid #cbd5e1;border-radius:2mm}.placeholder{display:grid;place-items:center;background:#f1f5f9;font-size:8px}.details h2{font-size:11px;margin:0 0 2mm}.details p{font-size:8px;margin:1.3mm 0}.agentid{font-size:10px!important;font-weight:800;color:#0f766e}.state{font-weight:800;color:#15803d}.foot{position:absolute;bottom:3mm;left:5mm;font-size:6px;letter-spacing:.7px;color:#64748b}.backbody{display:flex;align-items:center;gap:4mm;margin-top:3mm}.qr{width:28mm;height:28mm;object-fit:contain}.backbody strong{font-size:9px}.backbody p{font-size:7px;line-height:1.3;margin:1.5mm 0}.disclaimer{position:absolute;bottom:3mm;left:5mm;right:5mm;font-size:6px;color:#64748b}@media print{.no-print{display:none!important}body{margin:0}.sheet{gap:12mm}}`}</style>
+ </main>;
+}
