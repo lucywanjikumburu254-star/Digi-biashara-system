@@ -31,7 +31,8 @@ const DESCRIPTIONS: Record<ModuleName,string> = {
   appointments:"Schedule salon and service bookings against customers and staff.",
   reports:"Review recorded sales, purchases, expenses and business performance."
 };
-const PRODUCT_CATEGORY_SUGGESTIONS = ["General","Food & Beverages","Groceries","Hardware","Building Materials","Electrical","Plumbing","Tools","Electronics","Clothing & Fashion","Footwear","Beauty & Cosmetics","Household","Furniture","Stationery","Books","Automotive","Spare Parts","Agricultural Supplies","Medical Supplies","Services","Other"];\nconst PRODUCT_UNIT_SUGGESTIONS = ["piece","pcs","kg","g","tonne","litre","ml","metre","cm","box","pack","packet","carton","bottle","can","bag","roll","pair","set","dozen","tray","crate","hour","day","service"];\nconst money = (n:any) => "KSh " + Number(n ?? 0).toLocaleString("en-KE",{minimumFractionDigits:2,maximumFractionDigits:2});
+const PRODUCT_CATEGORY_SUGGESTIONS = ["General","Food & Beverages","Groceries","Hardware","Building Materials","Electrical","Plumbing","Tools","Electronics","Clothing & Fashion","Footwear","Beauty & Cosmetics","Household","Furniture","Stationery","Books","Automotive","Spare Parts","Agricultural Supplies","Medical Supplies","Services","Other"];
+const PRODUCT_UNIT_SUGGESTIONS = ["piece","pcs","kg","g","tonne","litre","ml","metre","cm","box","pack","packet","carton","bottle","can","bag","roll","pair","set","dozen","tray","crate","hour","day","service"];\nconst money = (n:any) => "KSh " + Number(n ?? 0).toLocaleString("en-KE",{minimumFractionDigits:2,maximumFractionDigits:2});
 const stamp = (value:any) => value ? new Date(value).toLocaleString("en-KE",{dateStyle:"medium",timeStyle:"short"}) : "—";
 
 export default function Workspace({moduleName,businessId,businessName,categoryName}:{moduleName:ModuleName;businessId:string;businessName:string;categoryName:string}) {
