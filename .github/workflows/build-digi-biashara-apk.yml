@@ -1,0 +1,66 @@
+name: Build Digi Biashara Android APK
+
+on:
+  push:
+    branches:
+      - release/android-apk-2026-11-22
+    paths:
+      - 'mobile-android/**'
+      - '.github/workflows/build-digi-biashara-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build installable Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out Digi Biashara
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install wrapper dependencies
+        working-directory: mobile-android
+        run: npm install --no-audit --no-fund
+
+      - name: Generate Android project
+        working-directory: mobile-android
+        run: npx cap add android
+
+      - name: Sync Capacitor Android project
+        working-directory: mobile-android
+        run: npx cap sync android
+
+      - name: Build APK
+        working-directory: mobile-android/android
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Create checksum
+        working-directory: mobile-android
+        run: sha256sum android/app/build/outputs/apk/debug/app-debug.apk > Digi-Biashara-Android-APK.sha256
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Digi-Biashara-Android-APK-${{ github.run_number }}
+          path: |
+            mobile-android/android/app/build/outputs/apk/debug/app-debug.apk
+            mobile-android/Digi-Biashara-Android-APK.sha256
+          if-no-files-found: error
+          retention-days: 30
